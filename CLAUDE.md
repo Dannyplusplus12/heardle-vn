@@ -1,11 +1,11 @@
 # Heardle VN
 
-Vietnamese music guessing game — Heardle clone using SoundCloud API.
+Vietnamese music guessing game — Heardle clone using Spotify API.
 
 ## Tech Stack
 - Backend: FastAPI + SQLAlchemy (asyncpg) + PostgreSQL
 - Frontend: React 18 + Vite + Tailwind CSS v4
-- Audio: SoundCloud API v2 + ffmpeg (clip cutting)
+- Audio: Spotify Web API (preview_url, 30s clips) + ffmpeg (clip cutting to 1/5/15/30s)
 - Deploy: Railway + Docker
 
 ## Local Dev
@@ -22,7 +22,7 @@ cd backend
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env  # fill in SOUNDCLOUD_CLIENT_ID
+cp .env.example .env  # fill in SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET
 uvicorn app.main:app --reload
 ```
 
@@ -43,13 +43,14 @@ docker-compose up --build
 
 | Variable | Where | Description |
 |---|---|---|
-| `SOUNDCLOUD_CLIENT_ID` | backend | From SoundCloud web app DevTools (see notes) |
+| `SPOTIFY_CLIENT_ID` | backend | From Spotify Developer Dashboard |
+| `SPOTIFY_CLIENT_SECRET` | backend | From Spotify Developer Dashboard |
 | `DATABASE_URL` | backend | postgresql+asyncpg://... (auto-set on Railway) |
 | `FRONTEND_ORIGIN` | backend | CORS origin, e.g. http://localhost:5173 |
 | `VITE_API_URL` | frontend | Backend URL, e.g. http://localhost:8000 |
 
-## SoundCloud client_id Note
-The client_id rotates every few weeks. To get a fresh one:
-1. Open soundcloud.com in Chrome
-2. DevTools → Network → filter `api-v2.soundcloud.com`
-3. Copy the `client_id` query param from any request
+## Spotify Credentials
+1. Go to https://developer.spotify.com/dashboard
+2. Create an app (any name/description, select "Web API")
+3. Copy Client ID and Client Secret into your `.env`
+4. Credentials are permanent — no rotation needed

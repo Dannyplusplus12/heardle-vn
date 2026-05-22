@@ -1,7 +1,7 @@
 import asyncio
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from app.soundcloud import get_random_vietnamese_track, get_stream_url
+from app.spotify import get_random_vietnamese_track, get_preview_url
 
 router = APIRouter(prefix="/api/game", tags=["game"])
 
@@ -21,9 +21,9 @@ async def get_clip(track_id: str, duration: int = Query(default=1)):
     if duration not in VALID_DURATIONS:
         raise HTTPException(status_code=400, detail="duration must be 1, 5, 15, or 30")
     try:
-        stream_url = await get_stream_url(track_id)
+        stream_url = await get_preview_url(track_id)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Stream error: {e}")
+        raise HTTPException(status_code=502, detail=f"Preview error: {e}")
 
     async def generate():
         process = await asyncio.create_subprocess_exec(
