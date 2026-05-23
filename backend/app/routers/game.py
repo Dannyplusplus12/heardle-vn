@@ -3,14 +3,20 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 import httpx
-from app.soundcloud import get_random_vietnamese_track, get_stream_url
+from app.soundcloud import get_random_vietnamese_track, get_random_track_by_artists, get_stream_url
 
 router = APIRouter(prefix="/api/game", tags=["game"])
 
 
 @router.get("/new")
-async def new_game(genre: Optional[str] = Query(default=None)):
+async def new_game(
+    genre: Optional[str] = Query(default=None),
+    artists: Optional[str] = Query(default=None),
+):
     try:
+        if artists:
+            artist_list = [a.strip() for a in artists.split(',') if a.strip()]
+            return await get_random_track_by_artists(artist_list)
         return await get_random_vietnamese_track(genre)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))

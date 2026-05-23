@@ -46,6 +46,11 @@ def _is_eligible(track: dict) -> bool:
     return True
 
 
+def _no_remix(track: dict) -> bool:
+    title = track.get("title", "").lower()
+    return not any(kw in title for kw in _REMIX_KEYWORDS)
+
+
 def _fmt(t: dict) -> dict:
     return {
         "id": str(t["id"]),
@@ -97,6 +102,48 @@ async def get_random_vietnamese_track(genre: str | None = None) -> dict:
             "cover_url": t.get("artwork_url") or t["user"].get("avatar_url", ""),
             "permalink_url": t.get("permalink_url", ""),
         }
+
+
+async def get_random_track_by_artists(artists: list[str]) -> dict:
+    artist = random.choice(artists)
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get(
+            f"{BASE}/search/tracks",
+            params={"q": artist, "limit": 50, "client_id": CLIENT_ID},
+        )
+        resp.raise_for_status()
+        collection = resp.json().get("collection", [])
+        tracks = [t for t in collection if _no_remix(t)]
+        if not tracks:
+            tracks = collection
+        if not tracks:
+            raise RuntimeError(f"No tracks found for artist: {artist}")
+        t = random.choice(tracks)
+        return {
+            "id": str(t["id"]),
+            "title": t["title"],
+            "artist": t["user"]["username"],
+            "cover_url": t.get("artwork_url") or t["user"].get("avatar_url", ""),
+            "permalink_url": t.get("permalink_url", ""),
+        }
+
+
+async def search_tracks_by_artists(q: str, artists: list[str], limit: int = 15) -> list[dict]:
+    seen: set[int] = set()
+    results: list[dict] = []
+    async with httpx.AsyncClient(timeout=10) as client:
+        for artist in artists[:3]:
+            resp = await client.get(
+                f"{BASE}/search/tracks",
+                params={"q": f"{q} {artist}", "limit": 30, "client_id": CLIENT_ID},
+            )
+            if resp.status_code != 200:
+                continue
+            for t in resp.json().get("collection", []):
+                if t["id"] not in seen:
+                    seen.add(t["id"])
+                    results.append(t)
+    return [_fmt(t) for t in results[:limit]]
 
 
 async def get_stream_url(track_id: str) -> str:

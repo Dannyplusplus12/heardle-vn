@@ -12,13 +12,15 @@ const GENRE_LABELS = {
   pop: 'POP', indie: 'INDIE', hiphop: 'HIP-HOP & RAP', rock: 'ROCK',
 }
 
-export default function GameScreen({ genre, onChangeGenre }) {
+export default function GameScreen({ genre, artists = [], onChangeGenre }) {
   const { track, stage, stageIndex, attempts, status, startNewGame, skip, guess, giveUp } = useGame()
   const gameOver = status === 'won' || status === 'lost'
   const [shake, setShake] = useState(false)
   const prevLen = useRef(0)
+  const isFanMode = artists.length > 0
+  const gameOptions = isFanMode ? { artists } : { genre }
 
-  useEffect(() => { startNewGame(genre) }, [])
+  useEffect(() => { startNewGame(gameOptions) }, [])
 
   useEffect(() => {
     if (attempts.length > prevLen.current) {
@@ -38,10 +40,10 @@ export default function GameScreen({ genre, onChangeGenre }) {
           onClick={onChangeGenre}
           className="text-xs font-bold uppercase tracking-wider text-gray-600 hover:text-gray-300 transition-colors"
         >
-          ← Đổi thể loại
+          ← {isFanMode ? 'Đổi nghệ sĩ' : 'Đổi thể loại'}
         </button>
         <span className="text-xs font-black uppercase tracking-widest px-3 py-1 border-2 border-orange-500/50 text-orange-400">
-          {GENRE_LABELS[genre] || 'NGẪU NHIÊN'}
+          {isFanMode ? '⭐ FAN CỨNG' : (GENRE_LABELS[genre] || 'NGẪU NHIÊN')}
         </span>
         <div className="w-20" />
       </header>
@@ -113,12 +115,12 @@ export default function GameScreen({ genre, onChangeGenre }) {
 
           {!gameOver && (
             <>
-              <GuessInput onGuess={guess} />
+              <GuessInput onGuess={guess} artists={artists} />
               <ActionBar onSkip={skip} onGiveUp={giveUp} stage={stage} />
             </>
           )}
 
-          <ResultBanner status={status} track={track} onPlayAgain={() => startNewGame(genre)} />
+          <ResultBanner status={status} track={track} onPlayAgain={() => startNewGame(gameOptions)} />
         </>
       )}
     </div>
