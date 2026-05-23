@@ -7,8 +7,8 @@ export async function fetchNewGame(genre) {
   return res.json()
 }
 
-export function getClipUrl(trackId) {
-  return `${API_BASE}/api/game/clip/${trackId}`
+export function getClipUrl(trackId, full = false) {
+  return `${API_BASE}/api/game/clip/${trackId}${full ? '?full=true' : ''}`
 }
 
 export async function searchTracks(q) {

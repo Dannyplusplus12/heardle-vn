@@ -1,10 +1,10 @@
 import { useState } from 'react'
 
 const GENRES = [
-  { id: 'pop',    label: 'Pop',          emoji: '🎤', gradient: 'from-pink-500 to-rose-600',   ring: 'ring-pink-500',   glow: 'shadow-pink-500/40' },
-  { id: 'indie',  label: 'Indie',        emoji: '🎸', gradient: 'from-violet-500 to-purple-600', ring: 'ring-violet-500', glow: 'shadow-violet-500/40' },
-  { id: 'hiphop', label: 'Hip-hop & Rap',emoji: '🎧', gradient: 'from-amber-400 to-yellow-600', ring: 'ring-amber-400',  glow: 'shadow-amber-400/40' },
-  { id: 'rock',   label: 'Rock',         emoji: '🤘', gradient: 'from-red-500 to-rose-700',    ring: 'ring-red-500',    glow: 'shadow-red-500/40' },
+  { id: 'pop',    label: 'POP',          emoji: '🎤', bg: 'bg-pink-500',   border: 'border-pink-400',   shadow: 'shadow-[4px_4px_0_#f472b6]' },
+  { id: 'indie',  label: 'INDIE',        emoji: '🎸', bg: 'bg-violet-500', border: 'border-violet-400', shadow: 'shadow-[4px_4px_0_#a78bfa]' },
+  { id: 'hiphop', label: 'HIP-HOP\n& RAP', emoji: '🎧', bg: 'bg-amber-400',  border: 'border-amber-300',  shadow: 'shadow-[4px_4px_0_#fcd34d]' },
+  { id: 'rock',   label: 'ROCK',         emoji: '🤘', bg: 'bg-red-500',    border: 'border-red-400',    shadow: 'shadow-[4px_4px_0_#f87171]' },
 ]
 
 export default function GenreScreen({ onStart }) {
@@ -12,11 +12,13 @@ export default function GenreScreen({ onStart }) {
 
   return (
     <div className="w-full max-w-xs">
-      <div className="mb-7">
-        <h1 className="text-2xl font-black bg-gradient-to-r from-orange-400 to-pink-400 bg-clip-text text-transparent mb-1">
-          Heardle VN
+      <div className="mb-8">
+        <h1 className="text-4xl font-black uppercase tracking-tight text-white mb-1">
+          Heardle<span className="text-orange-500"> VN</span>
         </h1>
-        <p className="text-gray-500 text-sm">Chọn thể loại để bắt đầu</p>
+        <p className="text-gray-500 text-sm font-medium uppercase tracking-widest">
+          Chọn thể loại
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-5">
@@ -27,15 +29,16 @@ export default function GenreScreen({ onStart }) {
               key={genre.id}
               onClick={() => setSelected(genre.id)}
               className={`
-                p-5 rounded-2xl flex flex-col items-center gap-3 transition-all duration-200
+                p-5 flex flex-col items-center gap-3 border-2 font-black
+                transition-all duration-75 cursor-pointer select-none
                 ${isSelected
-                  ? `bg-gradient-to-br ${genre.gradient} shadow-xl ${genre.glow} ring-2 ${genre.ring} ring-offset-2 ring-offset-[#09090f] scale-[1.02]`
-                  : 'bg-white/5 border border-white/10 hover:bg-white/8 hover:border-white/20'
+                  ? `${genre.bg} ${genre.border} ${genre.shadow} -translate-x-[2px] -translate-y-[2px] text-white`
+                  : 'bg-[#1a1a1a] border-white/20 text-gray-300 hover:border-white/50 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[2px_2px_0_rgba(255,255,255,0.2)]'
                 }
               `}
             >
               <span className="text-4xl">{genre.emoji}</span>
-              <span className="font-semibold text-white text-sm text-center leading-tight">
+              <span className="text-xs uppercase tracking-wider text-center leading-tight whitespace-pre-line">
                 {genre.label}
               </span>
             </button>
@@ -46,13 +49,13 @@ export default function GenreScreen({ onStart }) {
       <button
         onClick={() => selected && onStart(selected)}
         disabled={!selected}
-        className="w-full py-4 rounded-2xl font-semibold text-white transition-all duration-200
-          bg-gradient-to-r from-orange-500 to-pink-500
-          hover:from-orange-400 hover:to-pink-400
-          hover:shadow-xl hover:shadow-orange-500/30
-          disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:shadow-none"
+        className="w-full py-4 font-black text-sm uppercase tracking-widest border-2 transition-all duration-75
+          bg-orange-500 border-white text-white
+          hover:-translate-x-[2px] hover:-translate-y-[2px] hover:shadow-[4px_4px_0_#fff]
+          active:translate-x-0 active:translate-y-0 active:shadow-none
+          disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none"
       >
-        Bắt đầu chơi
+        Bắt đầu →
       </button>
     </div>
   )

@@ -11,11 +11,7 @@ export default function GuessInput({ onGuess }) {
   const containerRef = useRef(null)
 
   useEffect(() => {
-    if (query.length < 2) {
-      setResults([])
-      setOpen(false)
-      return
-    }
+    if (query.length < 1) { setResults([]); setOpen(false); return }
     const timer = setTimeout(async () => {
       setLoading(true)
       try {
@@ -27,24 +23,21 @@ export default function GuessInput({ onGuess }) {
       } finally {
         setLoading(false)
       }
-    }, 350)
+    }, 300)
     return () => clearTimeout(timer)
   }, [query])
 
   useEffect(() => {
-    const handleClick = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setOpen(false)
-      }
+    const close = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false)
     }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
   }, [])
 
   const handleInputChange = (e) => {
-    const val = e.target.value
-    setDisplayValue(val)
-    setQuery(val)
+    setDisplayValue(e.target.value)
+    setQuery(e.target.value)
     setSelected(null)
   }
 
@@ -64,10 +57,6 @@ export default function GuessInput({ onGuess }) {
     setResults([])
   }
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && selected) handleSubmit()
-  }
-
   return (
     <div ref={containerRef} className="w-full mb-3">
       <div className="relative mb-2">
@@ -75,30 +64,29 @@ export default function GuessInput({ onGuess }) {
           type="text"
           value={displayValue}
           onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Tìm theo tên bài hoặc nghệ sĩ..."
-          className={`w-full px-4 py-3 rounded-xl border text-white placeholder-white/25 focus:outline-none transition-all text-sm
+          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+          placeholder="Tìm bài hát hoặc nghệ sĩ..."
+          className={`w-full px-4 py-3 border-2 bg-[#1a1a1a] text-white font-medium text-sm placeholder-white/20
+            focus:outline-none transition-all duration-75
             ${selected
-              ? 'bg-orange-500/10 border-orange-500/40 focus:border-orange-500/60'
-              : 'bg-white/5 border-white/10 focus:border-orange-500/40 focus:bg-white/8'
-            }
-          `}
+              ? 'border-orange-500 shadow-[2px_2px_0_rgba(249,115,22,0.4)]'
+              : 'border-white/25 focus:border-white/60'
+            }`}
         />
         {loading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+            <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent animate-spin" />
           </div>
         )}
-
         {open && (
-          <ul className="absolute z-20 w-full mt-1.5 rounded-xl bg-[#18181f] border border-white/10 shadow-2xl max-h-52 overflow-y-auto">
+          <ul className="absolute z-20 w-full top-full border-x-2 border-b-2 border-white/25 bg-[#151515] max-h-52 overflow-y-auto shadow-[4px_4px_0_rgba(255,255,255,0.1)]">
             {results.map(r => (
               <li
                 key={r.id}
                 onMouseDown={() => handleSelect(r)}
-                className="px-4 py-2.5 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0 transition-colors"
+                className="px-4 py-2.5 border-b border-white/8 last:border-0 cursor-pointer hover:bg-white/5 transition-colors"
               >
-                <span className="text-white text-sm font-medium">{r.title}</span>
+                <span className="text-white text-sm font-semibold">{r.title}</span>
                 <span className="text-gray-500 text-sm"> · {r.artist}</span>
               </li>
             ))}
@@ -109,10 +97,11 @@ export default function GuessInput({ onGuess }) {
       <button
         onClick={handleSubmit}
         disabled={!selected}
-        className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200
-          bg-white/8 border border-white/10 text-gray-300
-          hover:bg-white/12 hover:border-white/20 hover:text-white
-          disabled:opacity-30 disabled:cursor-not-allowed"
+        className="w-full py-3 border-2 font-black text-sm uppercase tracking-widest transition-all duration-75
+          border-white/30 bg-[#1a1a1a] text-gray-300
+          hover:border-white hover:text-white hover:-translate-x-[2px] hover:-translate-y-[2px] hover:shadow-[4px_4px_0_#fff]
+          active:translate-x-0 active:translate-y-0 active:shadow-none
+          disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none"
       >
         Đoán
       </button>
