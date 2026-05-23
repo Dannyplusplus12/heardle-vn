@@ -5,21 +5,30 @@ import os
 CLIENT_ID = os.getenv("SOUNDCLOUD_CLIENT_ID", "")
 BASE = "https://api-v2.soundcloud.com"
 
-SEARCH_QUERIES = [
+_DEFAULT_QUERIES = [
     "nhac viet", "v-pop", "nhạc Việt", "nhac tre", "bolero viet", "nhac vang"
 ]
+
+_GENRE_QUERIES = {
+    "pop": ["vpop", "v-pop", "nhạc pop việt", "nhac pop viet"],
+    "indie": ["indie việt", "indie viet", "nhạc indie viet"],
+    "hiphop": ["rap việt", "rap viet", "nhạc rap", "hip-hop viet"],
+    "rock": ["rock việt", "rock viet", "nhạc rock viet"],
+}
 
 _REMIX_KEYWORDS = {
     "remix", "cover", "karaoke", "beat", "instrumental", "acoustic",
     "nightcore", "nhạc nền", "mashup", "medley", "lo-fi", "lofi",
 }
 
+_MIN_PLAYS = 50_000
+
 
 def _is_eligible(track: dict) -> bool:
     title = track.get("title", "").lower()
     if any(kw in title for kw in _REMIX_KEYWORDS):
         return False
-    return track.get("playback_count", 0) >= 5000
+    return track.get("playback_count", 0) >= _MIN_PLAYS
 
 
 async def search_tracks(q: str, limit: int = 10) -> list[dict]:
@@ -40,8 +49,9 @@ async def search_tracks(q: str, limit: int = 10) -> list[dict]:
         ]
 
 
-async def get_random_vietnamese_track() -> dict:
-    q = random.choice(SEARCH_QUERIES)
+async def get_random_vietnamese_track(genre: str | None = None) -> dict:
+    queries = _GENRE_QUERIES.get(genre, _DEFAULT_QUERIES) if genre else _DEFAULT_QUERIES
+    q = random.choice(queries)
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(
             f"{BASE}/search/tracks",

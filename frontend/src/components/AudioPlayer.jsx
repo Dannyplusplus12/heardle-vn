@@ -4,7 +4,6 @@ export default function AudioPlayer({ src, limit }) {
   const audioRef = useRef(null)
   const [playing, setPlaying] = useState(false)
 
-  // New track — reload audio
   useEffect(() => {
     setPlaying(false)
     if (audioRef.current) {
@@ -12,7 +11,6 @@ export default function AudioPlayer({ src, limit }) {
     }
   }, [src])
 
-  // Stage changed — reset position so next play starts from 0
   useEffect(() => {
     setPlaying(false)
     if (audioRef.current) {
@@ -46,18 +44,27 @@ export default function AudioPlayer({ src, limit }) {
       <audio
         ref={audioRef}
         src={src}
-        onEnded={() => { setPlaying(false) }}
+        onEnded={() => setPlaying(false)}
         onTimeUpdate={handleTimeUpdate}
         preload="auto"
       />
       <button
         onClick={toggle}
-        className="w-16 h-16 rounded-full bg-orange-500 hover:bg-orange-400 flex items-center justify-center text-2xl transition-colors shadow-lg"
+        className={`
+          w-18 h-18 rounded-full flex items-center justify-center text-2xl transition-all duration-200 shadow-lg
+          ${playing
+            ? 'bg-orange-500 shadow-orange-500/40 scale-95'
+            : 'bg-gradient-to-br from-orange-500 to-pink-500 hover:scale-105 shadow-orange-500/30'
+          }
+        `}
+        style={{ width: '4.5rem', height: '4.5rem' }}
         aria-label={playing ? 'Tạm dừng' : 'Phát'}
       >
         {playing ? '⏸' : '▶'}
       </button>
-      <span className="text-gray-400 text-sm">{playing ? 'Đang phát...' : 'Nhấn để nghe'}</span>
+      <span className="text-gray-500 text-xs">
+        {playing ? `Đang phát · ${limit}s` : `Nhấn để nghe · ${limit}s`}
+      </span>
     </div>
   )
 }

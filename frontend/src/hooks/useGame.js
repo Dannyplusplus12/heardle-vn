@@ -7,15 +7,15 @@ export function useGame() {
   const [track, setTrack] = useState(null)
   const [stageIndex, setStageIndex] = useState(0)
   const [attempts, setAttempts] = useState([])
-  const [status, setStatus] = useState('idle') // idle | loading | playing | won | lost
+  const [status, setStatus] = useState('idle')
 
-  const startNewGame = useCallback(async () => {
+  const startNewGame = useCallback(async (genre) => {
     setStatus('loading')
     setTrack(null)
     setAttempts([])
     setStageIndex(0)
     try {
-      const data = await fetchNewGame()
+      const data = await fetchNewGame(genre)
       setTrack(data)
       setStatus('playing')
     } catch {

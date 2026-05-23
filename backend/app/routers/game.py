@@ -1,5 +1,6 @@
 import asyncio
-from fastapi import APIRouter, HTTPException
+from typing import Optional
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from app.soundcloud import get_random_vietnamese_track, get_stream_url
 
@@ -7,9 +8,9 @@ router = APIRouter(prefix="/api/game", tags=["game"])
 
 
 @router.get("/new")
-async def new_game():
+async def new_game(genre: Optional[str] = Query(default=None)):
     try:
-        return await get_random_vietnamese_track()
+        return await get_random_vietnamese_track(genre)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
