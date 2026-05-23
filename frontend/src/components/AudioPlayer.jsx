@@ -3,9 +3,11 @@ import { useRef, useState, useEffect } from 'react'
 export default function AudioPlayer({ src, limit }) {
   const audioRef = useRef(null)
   const [playing, setPlaying] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     setPlaying(false)
+    setLoaded(false)
     if (audioRef.current) {
       audioRef.current.load()
     }
@@ -29,7 +31,7 @@ export default function AudioPlayer({ src, limit }) {
   }
 
   const toggle = () => {
-    if (!audioRef.current) return
+    if (!audioRef.current || !loaded) return
     if (playing) {
       audioRef.current.pause()
       setPlaying(false)
@@ -44,26 +46,33 @@ export default function AudioPlayer({ src, limit }) {
       <audio
         ref={audioRef}
         src={src}
+        onCanPlayThrough={() => setLoaded(true)}
         onEnded={() => setPlaying(false)}
         onTimeUpdate={handleTimeUpdate}
         preload="auto"
       />
       <button
         onClick={toggle}
+        disabled={!loaded}
+        style={{ width: '4.5rem', height: '4.5rem' }}
         className={`
-          w-18 h-18 rounded-full flex items-center justify-center text-2xl transition-all duration-200 shadow-lg
-          ${playing
-            ? 'bg-orange-500 shadow-orange-500/40 scale-95'
-            : 'bg-gradient-to-br from-orange-500 to-pink-500 hover:scale-105 shadow-orange-500/30'
+          rounded-full flex items-center justify-center text-2xl transition-all duration-200 shadow-lg
+          ${!loaded
+            ? 'bg-white/10 cursor-not-allowed'
+            : playing
+              ? 'bg-orange-500 shadow-orange-500/40 scale-95'
+              : 'bg-gradient-to-br from-orange-500 to-pink-500 hover:scale-105 shadow-orange-500/30 cursor-pointer'
           }
         `}
-        style={{ width: '4.5rem', height: '4.5rem' }}
-        aria-label={playing ? 'Tạm dừng' : 'Phát'}
+        aria-label={!loaded ? 'Đang tải...' : playing ? 'Tạm dừng' : 'Phát'}
       >
-        {playing ? '⏸' : '▶'}
+        {!loaded
+          ? <div className="w-5 h-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+          : playing ? '⏸' : '▶'
+        }
       </button>
       <span className="text-gray-500 text-xs">
-        {playing ? `Đang phát · ${limit}s` : `Nhấn để nghe · ${limit}s`}
+        {!loaded ? 'Đang tải âm thanh...' : playing ? `Đang phát · ${limit}s` : `Nhấn để nghe · ${limit}s`}
       </span>
     </div>
   )
