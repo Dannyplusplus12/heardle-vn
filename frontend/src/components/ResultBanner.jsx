@@ -10,7 +10,14 @@ export default function ResultBanner({ status, track, onPlayAgain }) {
       </div>
       {track && (
         <div className="text-center mb-4">
-          <div className="text-white font-bold text-sm">{track.title}</div>
+          <a
+            href={track.permalink_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-white font-bold text-sm hover:text-orange-400 transition-colors inline-flex items-center gap-1 justify-center"
+          >
+            {track.title} <span className="text-xs">↗</span>
+          </a>
           <div className="text-gray-500 text-xs">{track.artist}</div>
         </div>
       )}

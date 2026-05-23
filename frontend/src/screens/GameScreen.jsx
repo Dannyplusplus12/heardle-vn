@@ -74,7 +74,14 @@ export default function GameScreen({ genre, onChangeGenre }) {
 
           {gameOver && (
             <div className="text-center mb-5 -mt-2">
-              <div className="font-black text-white text-lg uppercase tracking-tight">{track.title}</div>
+              <a
+                href={track.permalink_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-black text-white text-lg uppercase tracking-tight hover:text-orange-400 transition-colors inline-flex items-center gap-1"
+              >
+                {track.title} <span className="text-base">↗</span>
+              </a>
               <div className="text-gray-400 text-sm font-medium">{track.artist}</div>
             </div>
           )}

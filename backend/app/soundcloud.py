@@ -32,11 +32,18 @@ def _strip_diacritics(text: str) -> str:
     ).lower().strip()
 
 
+_MAX_DURATION_MS = 7 * 60 * 1000  # 7 minutes
+
+
 def _is_eligible(track: dict) -> bool:
     title = track.get("title", "").lower()
     if any(kw in title for kw in _REMIX_KEYWORDS):
         return False
-    return track.get("playback_count", 0) >= _MIN_PLAYS
+    if track.get("playback_count", 0) < _MIN_PLAYS:
+        return False
+    if track.get("duration", 0) > _MAX_DURATION_MS:
+        return False
+    return True
 
 
 def _fmt(t: dict) -> dict:
@@ -88,6 +95,7 @@ async def get_random_vietnamese_track(genre: str | None = None) -> dict:
             "title": t["title"],
             "artist": t["user"]["username"],
             "cover_url": t.get("artwork_url") or t["user"].get("avatar_url", ""),
+            "permalink_url": t.get("permalink_url", ""),
         }
 
 
