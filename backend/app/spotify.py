@@ -22,7 +22,7 @@ def _client() -> spotipy.Spotify:
 
 def _search_sync(q: str, limit: int) -> list[dict]:
     sp = _client()
-    result = sp.search(q=q, type="track", limit=limit, market="VN")
+    result = sp.search(q=q, type="track", limit=limit)
     tracks = result.get("tracks", {}).get("items", [])
     return [
         {
@@ -38,7 +38,7 @@ def _search_sync(q: str, limit: int) -> list[dict]:
 def _random_track_sync() -> dict:
     sp = _client()
     q = random.choice(SEARCH_QUERIES)
-    result = sp.search(q=q, type="track", limit=20, market="VN")
+    result = sp.search(q=q, type="track", limit=20)
     tracks = [
         t for t in result.get("tracks", {}).get("items", [])
         if t.get("preview_url")
