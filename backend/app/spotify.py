@@ -38,7 +38,7 @@ def _search_sync(q: str, limit: int) -> list[dict]:
 def _random_track_sync() -> dict:
     sp = _client()
     q = random.choice(SEARCH_QUERIES)
-    result = sp.search(q=q, type="track", limit=20)
+    result = sp.search(q=q, type="track", limit=10)
     tracks = [
         t for t in result.get("tracks", {}).get("items", [])
         if t.get("preview_url")
