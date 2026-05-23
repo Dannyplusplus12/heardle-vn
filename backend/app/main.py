@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from app.routers import game, search
+from app.routers import game, search, artists
 
 app = FastAPI(title="Heardle VN API")
 
@@ -14,6 +14,7 @@ app.add_middleware(
 
 app.include_router(game.router)
 app.include_router(search.router)
+app.include_router(artists.router)
 
 
 @app.get("/api/health")

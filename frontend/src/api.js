@@ -14,6 +14,13 @@ export function getClipUrl(trackId, full = false) {
   return `${API_BASE}/api/game/clip/${trackId}${full ? '?full=true' : ''}`
 }
 
+export async function fetchArtistProfiles(names) {
+  const params = new URLSearchParams({ names: names.join(',') })
+  const res = await fetch(`${API_BASE}/api/artists/profiles?${params}`)
+  if (!res.ok) throw new Error('Failed to fetch profiles')
+  return res.json()
+}
+
 export async function searchTracks(q, artists = []) {
   const params = new URLSearchParams({ q })
   if (artists.length) params.set('artists', artists.join(','))

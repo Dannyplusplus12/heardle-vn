@@ -1,3 +1,4 @@
+import asyncio
 import httpx
 import random
 import os
@@ -104,28 +105,59 @@ async def get_random_vietnamese_track(genre: str | None = None) -> dict:
         }
 
 
+async def _find_user(client: httpx.AsyncClient, name: str) -> dict | None:
+    resp = await client.get(
+        f"{BASE}/search/users",
+        params={"q": name, "limit": 3, "client_id": CLIENT_ID},
+    )
+    if resp.status_code != 200:
+        return None
+    users = resp.json().get("collection", [])
+    return users[0] if users else None
+
+
 async def get_random_track_by_artists(artists: list[str]) -> dict:
-    artist = random.choice(artists)
-    async with httpx.AsyncClient(timeout=10) as client:
+    artist_name = random.choice(artists)
+    async with httpx.AsyncClient(timeout=15) as client:
+        user = await _find_user(client, artist_name)
+        if not user:
+            raise RuntimeError(f"No SoundCloud user found for: {artist_name}")
+        user_id = user["id"]
+
         resp = await client.get(
-            f"{BASE}/search/tracks",
-            params={"q": artist, "limit": 50, "client_id": CLIENT_ID},
+            f"{BASE}/users/{user_id}/tracks",
+            params={"client_id": CLIENT_ID, "limit": 50},
         )
         resp.raise_for_status()
-        collection = resp.json().get("collection", [])
-        tracks = [t for t in collection if _no_remix(t)]
+        tracks = resp.json().get("collection", [])
         if not tracks:
-            tracks = collection
-        if not tracks:
-            raise RuntimeError(f"No tracks found for artist: {artist}")
+            raise RuntimeError(f"No tracks on account for: {artist_name}")
+
         t = random.choice(tracks)
         return {
             "id": str(t["id"]),
             "title": t["title"],
-            "artist": t["user"]["username"],
-            "cover_url": t.get("artwork_url") or t["user"].get("avatar_url", ""),
+            "artist": t.get("user", {}).get("username", artist_name),
+            "cover_url": t.get("artwork_url") or user.get("avatar_url", ""),
             "permalink_url": t.get("permalink_url", ""),
         }
+
+
+async def get_artist_profiles(names: list[str]) -> list[dict]:
+    async def fetch_one(name: str) -> dict:
+        try:
+            async with httpx.AsyncClient(timeout=8) as client:
+                user = await _find_user(client, name)
+                if not user:
+                    return {"name": name, "avatar_url": None, "user_id": None}
+                avatar = user.get("avatar_url") or ""
+                if avatar:
+                    avatar = avatar.replace("-large.", "-t300x300.")
+                return {"name": name, "avatar_url": avatar, "user_id": str(user["id"])}
+        except Exception:
+            return {"name": name, "avatar_url": None, "user_id": None}
+
+    return list(await asyncio.gather(*[fetch_one(n) for n in names]))
 
 
 async def search_tracks_by_artists(q: str, artists: list[str], limit: int = 15) -> list[dict]:

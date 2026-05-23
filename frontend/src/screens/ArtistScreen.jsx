@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { fetchArtistProfiles } from '../api'
 
 const ARTISTS = [
   { id: 'son-tung',        name: 'Sơn Tùng M-TP',   query: 'Son Tung MTP',          initials: 'ST',  color: '#f97316' },
@@ -29,6 +30,18 @@ const ARTISTS = [
 
 export default function ArtistScreen({ onStart }) {
   const [selected, setSelected] = useState(new Set())
+  const [avatars, setAvatars] = useState({})
+
+  useEffect(() => {
+    const names = ARTISTS.map(a => a.query)
+    fetchArtistProfiles(names)
+      .then(profiles => {
+        const map = {}
+        profiles.forEach(p => { map[p.name] = p.avatar_url })
+        setAvatars(map)
+      })
+      .catch(() => {})
+  }, [])
 
   const toggle = (id) => {
     setSelected(prev => {
@@ -55,18 +68,20 @@ export default function ArtistScreen({ onStart }) {
         </div>
         <p className="text-gray-500 text-sm font-medium uppercase tracking-widest">
           {selected.size > 0
-            ? `${selected.size} nghệ sĩ đã chọn · click để bỏ chọn`
+            ? `${selected.size} nghệ sĩ đã chọn`
             : 'Chọn một hoặc nhiều nghệ sĩ'}
         </p>
       </div>
 
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="flex flex-wrap gap-3 mb-6">
         {ARTISTS.map(artist => {
           const isSelected = selected.has(artist.id)
+          const avatarUrl = avatars[artist.query]
           return (
             <button
               key={artist.id}
               onClick={() => toggle(artist.id)}
+              style={{ width: 'calc(25% - 9px)' }}
               className={`
                 flex flex-col items-start border-2 overflow-hidden transition-all duration-75 cursor-pointer select-none text-left
                 ${isSelected
@@ -76,12 +91,15 @@ export default function ArtistScreen({ onStart }) {
               `}
             >
               <div
-                className="w-full aspect-square flex items-center justify-center font-black text-2xl text-white/90 relative"
+                className="w-full aspect-square relative flex items-center justify-center font-black text-2xl text-white/80"
                 style={{ background: artist.color }}
               >
-                <span className="drop-shadow-sm">{artist.initials}</span>
+                {avatarUrl
+                  ? <img src={avatarUrl} alt={artist.name} className="w-full h-full object-cover absolute inset-0" />
+                  : <span className="relative z-10">{artist.initials}</span>
+                }
                 {isSelected && (
-                  <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-orange-500 border-2 border-white flex items-center justify-center">
+                  <div className="absolute top-1.5 right-1.5 z-20 w-5 h-5 bg-orange-500 border-2 border-white flex items-center justify-center">
                     <span className="text-[10px] text-white font-black leading-none">✓</span>
                   </div>
                 )}
