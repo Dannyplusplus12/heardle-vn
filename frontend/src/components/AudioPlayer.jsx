@@ -1,15 +1,34 @@
 import { useRef, useState, useEffect } from 'react'
 
-export default function AudioPlayer({ src }) {
+export default function AudioPlayer({ src, limit }) {
   const audioRef = useRef(null)
   const [playing, setPlaying] = useState(false)
 
+  // New track — reload audio
   useEffect(() => {
     setPlaying(false)
     if (audioRef.current) {
       audioRef.current.load()
     }
   }, [src])
+
+  // Stage changed — reset position so next play starts from 0
+  useEffect(() => {
+    setPlaying(false)
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+    }
+  }, [limit])
+
+  const handleTimeUpdate = () => {
+    const audio = audioRef.current
+    if (audio && audio.currentTime >= limit) {
+      audio.pause()
+      audio.currentTime = 0
+      setPlaying(false)
+    }
+  }
 
   const toggle = () => {
     if (!audioRef.current) return
@@ -27,7 +46,8 @@ export default function AudioPlayer({ src }) {
       <audio
         ref={audioRef}
         src={src}
-        onEnded={() => setPlaying(false)}
+        onEnded={() => { setPlaying(false) }}
+        onTimeUpdate={handleTimeUpdate}
         preload="auto"
       />
       <button

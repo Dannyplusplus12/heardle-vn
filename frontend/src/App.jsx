@@ -49,7 +49,7 @@ export default function App() {
 
             <ClipStageBar stageIndex={stageIndex} />
 
-            <AudioPlayer src={getClipUrl(track.id, stage)} />
+            <AudioPlayer src={getClipUrl(track.id)} limit={stage} />
 
             {!gameOver && (
               <>

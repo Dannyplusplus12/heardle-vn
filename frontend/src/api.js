@@ -6,8 +6,8 @@ export async function fetchNewGame() {
   return res.json()
 }
 
-export function getClipUrl(trackId, duration) {
-  return `${API_BASE}/api/game/clip/${trackId}?duration=${duration}`
+export function getClipUrl(trackId) {
+  return `${API_BASE}/api/game/clip/${trackId}`
 }
 
 export async function searchTracks(q) {
