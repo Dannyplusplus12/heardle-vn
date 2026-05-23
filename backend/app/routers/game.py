@@ -1,7 +1,7 @@
 import asyncio
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from app.spotify import get_random_vietnamese_track, get_preview_url
+from app.soundcloud import get_random_vietnamese_track, get_stream_url as get_preview_url
 
 router = APIRouter(prefix="/api/game", tags=["game"])
 
