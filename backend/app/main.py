@@ -33,6 +33,14 @@ async def lifespan(app: FastAPI):
                 "ALTER TABLE artists ADD COLUMN IF NOT EXISTS soundcloud_url text",
                 "ALTER TABLE artists ADD COLUMN IF NOT EXISTS youtube_url text",
                 "ALTER TABLE artists ADD COLUMN IF NOT EXISTS needs_manual_url boolean NOT NULL DEFAULT false",
+                # Backfill artist_id on existing tracks by matching artist_name → artists.name
+                """
+                UPDATE tracks t
+                SET artist_id = a.id
+                FROM artists a
+                WHERE lower(t.artist_name) = lower(a.name)
+                  AND t.artist_id IS NULL
+                """,
             ]:
                 await conn.execute(text(stmt))
     except Exception as e:
