@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { fetchArtists, fetchPlaylists } from '../api'
+import { fetchAllArtists, fetchPlaylists } from '../api'
 import { useAuth } from '../auth/AuthContext'
 import LoginButton from '../auth/LoginButton'
 import GameScreen from '../screens/GameScreen'
@@ -267,7 +267,7 @@ export default function FanCungPage() {
   const loadArtists = useCallback(async (q = '') => {
     setLoadingArtists(true)
     try {
-      const data = await fetchArtists({ search: q, limit: 200 })
+      const data = await fetchAllArtists({ search: q })
       setArtists(data)
     } catch { setArtists([]) }
     setLoadingArtists(false)

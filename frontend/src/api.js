@@ -45,6 +45,20 @@ export async function fetchArtists({ search = '', limit = 60, offset = 0 } = {})
   return res.json()
 }
 
+// Fetches all artists by paginating with the backend's max page size (200).
+export async function fetchAllArtists({ search = '' } = {}) {
+  const PAGE = 200
+  const pages = []
+  let offset = 0
+  while (true) {
+    const page = await fetchArtists({ search, limit: PAGE, offset })
+    pages.push(...page)
+    if (page.length < PAGE) break
+    offset += PAGE
+  }
+  return pages
+}
+
 export async function fetchArtistProfiles(names) {
   const params = new URLSearchParams({ names: names.join(',') })
   const res = await fetch(`${API_BASE}/api/artists/profiles?${params}`)
