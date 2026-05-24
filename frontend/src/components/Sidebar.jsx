@@ -6,8 +6,8 @@ const MODES = [
 
 export default function Sidebar({ activeMode, onSelectMode }) {
   return (
-    <nav className="w-[136px] min-h-screen bg-[#111] border-r-2 border-white/10 flex flex-col items-center pt-8 pb-12 gap-4 shrink-0">
-      <div className="mb-6 w-[72px] h-[72px] flex items-center justify-center border-2 border-orange-500 text-orange-500 font-black text-3xl select-none">
+    <nav className="w-[90px] min-h-screen bg-[#111] border-r-2 border-white/10 flex flex-col items-center pt-5 pb-8 gap-3 shrink-0">
+      <div className="mb-4 w-[48px] h-[48px] flex items-center justify-center border-2 border-orange-500 text-orange-500 font-black text-xl select-none">
         ♪
       </div>
       {MODES.map(mode => (
@@ -17,7 +17,7 @@ export default function Sidebar({ activeMode, onSelectMode }) {
           disabled={!mode.available}
           title={mode.label.replace('\n', ' ')}
           className={`
-            w-[108px] h-[96px] flex flex-col items-center justify-center gap-1 border-2 transition-all duration-75
+            w-[72px] h-[64px] flex flex-col items-center justify-center gap-1 border-2 transition-all duration-75
             ${activeMode === mode.id
               ? 'border-orange-500 bg-orange-500/15 text-orange-400 shadow-[4px_4px_0_rgba(249,115,22,0.5)]'
               : mode.available
@@ -26,8 +26,8 @@ export default function Sidebar({ activeMode, onSelectMode }) {
             }
           `}
         >
-          <span className="text-4xl leading-none">{mode.emoji}</span>
-          <span className="text-[16px] font-black uppercase leading-tight whitespace-pre-line text-center tracking-wide">
+          <span className="text-2xl leading-none">{mode.emoji}</span>
+          <span className="text-[11px] font-black uppercase leading-tight whitespace-pre-line text-center tracking-wide">
             {mode.label}
           </span>
         </button>

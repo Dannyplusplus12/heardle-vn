@@ -14,6 +14,14 @@ export function getClipUrl(trackId, full = false) {
   return `${API_BASE}/api/game/clip/${trackId}${full ? '?full=true' : ''}`
 }
 
+export async function fetchArtists({ search = '', limit = 60, offset = 0 } = {}) {
+  const params = new URLSearchParams({ limit, offset })
+  if (search) params.set('search', search)
+  const res = await fetch(`${API_BASE}/api/artists?${params}`)
+  if (!res.ok) throw new Error('Không thể tải danh sách nghệ sĩ')
+  return res.json()
+}
+
 export async function fetchArtistProfiles(names) {
   const params = new URLSearchParams({ names: names.join(',') })
   const res = await fetch(`${API_BASE}/api/artists/profiles?${params}`)

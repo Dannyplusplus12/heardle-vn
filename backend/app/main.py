@@ -1,9 +1,21 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
+
+from app.database import engine, Base
+import app.models  # noqa: F401 — registers models with Base
 from app.routers import game, search, artists
 
-app = FastAPI(title="Heardle VN API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+
+app = FastAPI(title="Heardle VN API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
