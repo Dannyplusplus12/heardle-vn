@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
-from app.soundcloud import get_artist_profiles
+from app.spotify import get_artist_profiles
 
 router = APIRouter(prefix="/api", tags=["artists"])
 
