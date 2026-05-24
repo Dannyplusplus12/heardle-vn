@@ -1,13 +1,14 @@
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-import os
 
 from app.database import engine, Base
 import app.models  # noqa: F401 — registers models with Base
-from app.routers import game, search, artists
+from app.routers import game, search, artists, auth, admin, playlists
 from app.seeder import seed_if_empty, reseed_all
 
 logging.basicConfig(level=logging.INFO)
@@ -22,12 +23,18 @@ async def lifespan(app: FastAPI):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
             # Idempotent migrations for pre-existing tables
-            await conn.execute(text(
-                "ALTER TABLE tracks ADD COLUMN IF NOT EXISTS source varchar(20) DEFAULT 'deezer'"))
-            await conn.execute(text(
-                "ALTER TABLE tracks ADD COLUMN IF NOT EXISTS source_id varchar(80)"))
-            await conn.execute(text(
-                "ALTER TABLE artists ADD COLUMN IF NOT EXISTS playable boolean NOT NULL DEFAULT true"))
+            for stmt in [
+                "ALTER TABLE tracks ADD COLUMN IF NOT EXISTS source varchar(20) DEFAULT 'deezer'",
+                "ALTER TABLE tracks ADD COLUMN IF NOT EXISTS source_id varchar(80)",
+                "ALTER TABLE tracks ADD COLUMN IF NOT EXISTS artist_id integer",
+                "ALTER TABLE tracks ADD COLUMN IF NOT EXISTS duration_ms integer",
+                "ALTER TABLE artists ADD COLUMN IF NOT EXISTS playable boolean NOT NULL DEFAULT true",
+                "ALTER TABLE artists ADD COLUMN IF NOT EXISTS description text",
+                "ALTER TABLE artists ADD COLUMN IF NOT EXISTS soundcloud_url text",
+                "ALTER TABLE artists ADD COLUMN IF NOT EXISTS youtube_url text",
+                "ALTER TABLE artists ADD COLUMN IF NOT EXISTS needs_manual_url boolean NOT NULL DEFAULT false",
+            ]:
+                await conn.execute(text(stmt))
     except Exception as e:
         print(f"[startup] DB unavailable, skipping table creation: {e}")
     asyncio.create_task(seed_if_empty())
@@ -36,16 +43,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Heardle VN API", lifespan=lifespan)
 
+_FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")],
-    allow_methods=["GET"],
+    allow_origins=[_FRONTEND_ORIGIN],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
 app.include_router(game.router)
 app.include_router(search.router)
 app.include_router(artists.router)
+app.include_router(auth.router)
+app.include_router(admin.router)
+app.include_router(playlists.router)
 
 
 @app.get("/api/health")

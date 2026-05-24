@@ -9,6 +9,7 @@ export function useGame() {
   const [attempts, setAttempts] = useState([])
   const [status, setStatus] = useState('idle')
 
+  // options: { genre?, artists?, artistIds?, playlistIds? }
   const startNewGame = useCallback(async (options = {}) => {
     setStatus('loading')
     setTrack(null)

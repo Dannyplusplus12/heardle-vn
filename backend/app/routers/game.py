@@ -16,15 +16,66 @@ router = APIRouter(prefix="/api/game", tags=["game"])
 CLIP_SECONDS = 30
 
 
+async def _random_from_pool(artist_ids: list[int], playlist_ids: list[int]) -> dict:
+    from app.database import AsyncSessionLocal
+    from app.models import Track, PlaylistTrack
+    from sqlalchemy import select, or_
+    from sqlalchemy import func as sqlfunc
+
+    async with AsyncSessionLocal() as db:
+        pool_conditions = []
+
+        if artist_ids:
+            pool_conditions.append(Track.artist_id.in_(artist_ids))
+
+        if playlist_ids:
+            pt_result = await db.execute(
+                select(PlaylistTrack.track_id).where(PlaylistTrack.playlist_id.in_(playlist_ids))
+            )
+            pl_track_ids = [r[0] for r in pt_result.all()]
+            if pl_track_ids:
+                pool_conditions.append(Track.id.in_(pl_track_ids))
+
+        if not pool_conditions:
+            raise RuntimeError("Empty pool — no artists or playlists selected")
+
+        q = (
+            select(Track)
+            .where(or_(*pool_conditions))
+            .order_by(sqlfunc.random())
+            .limit(1)
+        )
+        track = (await db.execute(q)).scalar_one_or_none()
+
+    if not track:
+        raise RuntimeError("No tracks found — crawl the selected artists first")
+
+    return {
+        "id": track.id,
+        "title": track.title,
+        "artist": track.artist_name,
+        "cover_url": track.cover_url or "",
+        "permalink_url": track.permalink_url or "",
+    }
+
+
 @router.get("/new")
 async def new_game(
     genre: Optional[str] = Query(default=None),
-    artists: Optional[str] = Query(default=None),
+    artists: Optional[str] = Query(default=None),       # legacy: comma-sep names
+    artist_ids: Optional[str] = Query(default=None),    # pool-aware: comma-sep DB IDs
+    playlist_ids: Optional[str] = Query(default=None),  # pool-aware: comma-sep playlist IDs
 ):
     try:
+        if artist_ids or playlist_ids:
+            parsed_artist_ids = [int(x) for x in artist_ids.split(",") if x.strip()] if artist_ids else []
+            parsed_playlist_ids = [int(x) for x in playlist_ids.split(",") if x.strip()] if playlist_ids else []
+            return await _random_from_pool(parsed_artist_ids, parsed_playlist_ids)
+
         if artists:
-            artist_list = [a.strip() for a in artists.split(',') if a.strip()]
+            artist_list = [a.strip() for a in artists.split(",") if a.strip()]
             return await get_random_track_by_artists(artist_list)
+
         return await get_random_vietnamese_track(genre)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
@@ -81,7 +132,6 @@ async def get_clip(track_id: str, full: bool = Query(default=False)):
 
     try:
         if source == "deezer":
-            # Deezer previews are already ~30s — proxy directly, no transcode needed.
             preview_url = await get_preview_url(source_id)
             return StreamingResponse(
                 _proxy(preview_url),

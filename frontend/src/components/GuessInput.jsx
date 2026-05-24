@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { searchTracks } from '../api'
 
-export default function GuessInput({ onGuess, artists = [] }) {
+export default function GuessInput({ onGuess, artists = [], artistIds = [], playlistIds = [] }) {
   const [query, setQuery] = useState('')
   const [displayValue, setDisplayValue] = useState('')
   const [results, setResults] = useState([])
@@ -15,7 +15,7 @@ export default function GuessInput({ onGuess, artists = [] }) {
     const timer = setTimeout(async () => {
       setLoading(true)
       try {
-        const data = await searchTracks(query, artists)
+        const data = await searchTracks(query, { artists, artistIds, playlistIds })
         setResults(data)
         setOpen(data.length > 0)
       } catch {
@@ -25,7 +25,7 @@ export default function GuessInput({ onGuess, artists = [] }) {
       }
     }, 300)
     return () => clearTimeout(timer)
-  }, [query])
+  }, [query]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const close = (e) => {

@@ -12,15 +12,26 @@ const GENRE_LABELS = {
   pop: 'POP', indie: 'INDIE', hiphop: 'HIP-HOP & RAP', rock: 'ROCK',
 }
 
-export default function GameScreen({ genre, artists = [], onChangeGenre }) {
+export default function GameScreen({
+  genre,
+  artists = [],
+  artistIds = [],
+  playlistIds = [],
+  onBack,
+}) {
   const { track, stage, stageIndex, attempts, status, startNewGame, skip, guess, giveUp } = useGame()
   const gameOver = status === 'won' || status === 'lost'
   const [shake, setShake] = useState(false)
   const prevLen = useRef(0)
-  const isFanMode = artists.length > 0
-  const gameOptions = isFanMode ? { artists } : { genre }
 
-  useEffect(() => { startNewGame(gameOptions) }, [])
+  const isFanMode = artistIds.length > 0 || playlistIds.length > 0 || artists.length > 0
+  const gameOptions = (artistIds.length > 0 || playlistIds.length > 0)
+    ? { artistIds, playlistIds }
+    : isFanMode
+      ? { artists }
+      : { genre }
+
+  useEffect(() => { startNewGame(gameOptions) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (attempts.length > prevLen.current) {
@@ -37,10 +48,10 @@ export default function GameScreen({ genre, artists = [], onChangeGenre }) {
     <div className="w-full max-w-xs">
       <header className="flex items-center justify-between mb-6">
         <button
-          onClick={onChangeGenre}
+          onClick={onBack}
           className="text-xs font-bold uppercase tracking-wider text-gray-600 hover:text-gray-300 transition-colors"
         >
-          ← {isFanMode ? 'Đổi nghệ sĩ' : 'Đổi thể loại'}
+          ← {isFanMode ? 'Đổi nguồn' : 'Đổi thể loại'}
         </button>
         <span className="text-xs font-black uppercase tracking-widest px-3 py-1 border-2 border-orange-500/50 text-orange-400">
           {isFanMode ? '⭐ FAN CỨNG' : (GENRE_LABELS[genre] || 'NGẪU NHIÊN')}
@@ -59,7 +70,7 @@ export default function GameScreen({ genre, artists = [], onChangeGenre }) {
         <div className="text-center py-16">
           <p className="text-gray-500 text-sm mb-4">Không thể tải bài hát</p>
           <button
-            onClick={() => startNewGame(genre)}
+            onClick={() => startNewGame(gameOptions)}
             className="px-6 py-3 border-2 border-white font-black text-sm uppercase tracking-wider
               hover:-translate-x-[2px] hover:-translate-y-[2px] hover:shadow-[4px_4px_0_#fff] transition-all duration-75"
           >
@@ -115,7 +126,12 @@ export default function GameScreen({ genre, artists = [], onChangeGenre }) {
 
           {!gameOver && (
             <>
-              <GuessInput onGuess={guess} artists={artists} />
+              <GuessInput
+                onGuess={guess}
+                artists={artists}
+                artistIds={artistIds}
+                playlistIds={playlistIds}
+              />
               <ActionBar onSkip={skip} onGiveUp={giveUp} stage={stage} />
             </>
           )}

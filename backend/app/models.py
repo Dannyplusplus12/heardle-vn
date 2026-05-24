@@ -4,6 +4,18 @@ from sqlalchemy import Integer, String, Text, DateTime, Boolean, func
 from app.database import Base
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    picture: Mapped[str | None] = mapped_column(Text, nullable=True)
+    google_id: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True)
+    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Artist(Base):
     __tablename__ = "artists"
 
@@ -14,6 +26,10 @@ class Artist(Base):
     genre: Mapped[str | None] = mapped_column(String(100), nullable=True)
     popularity: Mapped[str | None] = mapped_column(String(50), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    soundcloud_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    youtube_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    needs_manual_url: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # False once a reseed confirms the artist has <=10 playable songs anywhere.
     playable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
@@ -26,10 +42,32 @@ class Track(Base):
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     artist_name: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    artist_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     source: Mapped[str] = mapped_column(String(20), nullable=False, default="deezer")
     source_id: Mapped[str] = mapped_column(String(80), nullable=False)
     cover_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     permalink_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class Playlist(Base):
+    __tablename__ = "playlists"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    cover_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PlaylistTrack(Base):
+    __tablename__ = "playlist_tracks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    playlist_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    track_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
