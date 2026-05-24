@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 import httpx
-from app.spotify import get_random_vietnamese_track, get_random_track_by_artists, get_preview_url
+from app.deezer import get_random_vietnamese_track, get_random_track_by_artists, get_preview_url
 
 router = APIRouter(prefix="/api/game", tags=["game"])
 

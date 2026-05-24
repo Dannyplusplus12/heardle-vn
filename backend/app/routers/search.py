@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
-from app.spotify import search_tracks, search_tracks_by_artists
+from app.deezer import search_tracks, search_tracks_by_artists
 
 router = APIRouter(prefix="/api", tags=["search"])
 
