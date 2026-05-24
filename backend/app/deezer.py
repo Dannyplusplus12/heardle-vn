@@ -77,6 +77,29 @@ async def get_random_vietnamese_track(genre: str | None = None) -> dict:
 
 
 async def get_random_track_by_artists(artists: list[str]) -> dict:
+    # Try DB cache first — instant if tracks are seeded
+    try:
+        from app.database import AsyncSessionLocal
+        from app.models import Track
+        from sqlalchemy import select, func as sqlfunc
+        lower_names = [a.lower() for a in artists]
+        async with AsyncSessionLocal() as db:
+            q = select(Track).where(sqlfunc.lower(Track.artist_name).in_(lower_names))
+            result = await db.execute(q)
+            cached = result.scalars().all()
+        if cached:
+            t = random.choice(cached)
+            return {
+                "id": t.id,
+                "title": t.title,
+                "artist": t.artist_name,
+                "cover_url": t.cover_url or "",
+                "permalink_url": t.permalink_url or "",
+            }
+    except Exception:
+        pass
+
+    # Fall back to live Deezer API
     candidates = random.sample(artists, min(len(artists), 5))
     async with httpx.AsyncClient(timeout=15) as client:
         for artist_name in candidates:
@@ -87,6 +110,23 @@ async def get_random_track_by_artists(artists: list[str]) -> dict:
 
 
 async def get_artist_profiles(names: list[str]) -> list[dict]:
+    # Check DB for already-cached avatars
+    db_avatars: dict[str, str] = {}
+    try:
+        from app.database import AsyncSessionLocal
+        from app.models import Artist
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as db:
+            q = select(Artist).where(Artist.name.in_(names))
+            result = await db.execute(q)
+            for row in result.scalars().all():
+                if row.avatar_url:
+                    db_avatars[row.name] = row.avatar_url
+    except Exception:
+        pass
+
+    missing = [n for n in names if n not in db_avatars]
+
     async def fetch_one(name: str) -> dict:
         try:
             async with httpx.AsyncClient(timeout=8) as client:
@@ -94,11 +134,30 @@ async def get_artist_profiles(names: list[str]) -> list[dict]:
                 if not artist:
                     return {"name": name, "avatar_url": None}
                 pic = artist.get("picture_medium") or artist.get("picture") or None
+                # Persist to DB so next call is instant
+                try:
+                    from app.database import AsyncSessionLocal
+                    from app.models import Artist
+                    from sqlalchemy import select
+                    async with AsyncSessionLocal() as db:
+                        q = select(Artist).where(Artist.name == name)
+                        row = (await db.execute(q)).scalar_one_or_none()
+                        if row and pic:
+                            row.avatar_url = pic
+                            await db.commit()
+                except Exception:
+                    pass
                 return {"name": name, "avatar_url": pic}
         except Exception:
             return {"name": name, "avatar_url": None}
 
-    return list(await asyncio.gather(*[fetch_one(n) for n in names]))
+    deezer_results = list(await asyncio.gather(*[fetch_one(n) for n in missing]))
+    deezer_map = {r["name"]: r["avatar_url"] for r in deezer_results}
+
+    return [
+        {"name": n, "avatar_url": db_avatars.get(n) or deezer_map.get(n)}
+        for n in names
+    ]
 
 
 async def search_tracks(q: str, limit: int = 15) -> list[dict]:

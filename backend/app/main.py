@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +8,9 @@ import os
 from app.database import engine, Base
 import app.models  # noqa: F401 — registers models with Base
 from app.routers import game, search, artists
+from app.seeder import seed_if_empty
+
+logging.basicConfig(level=logging.INFO)
 
 
 @asynccontextmanager
@@ -15,6 +20,7 @@ async def lifespan(app: FastAPI):
             await conn.run_sync(Base.metadata.create_all)
     except Exception as e:
         print(f"[startup] DB unavailable, skipping table creation: {e}")
+    asyncio.create_task(seed_if_empty())
     yield
 
 
