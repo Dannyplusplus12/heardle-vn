@@ -4,16 +4,30 @@ import httpx
 
 BASE = "https://api.deezer.com"
 
-SEARCH_QUERIES = [
-    "nhạc việt", "vpop", "nhac viet", "bolero viet", "nhac tre", "nhac vang",
-    "vpop 2024", "nhạc trẻ việt nam",
+# Curated Vietnamese artist pool — random mode picks from here to guarantee VN music
+_VN_ARTISTS = [
+    "Son Tung MTP", "HIEUTHUHAI", "tlinh", "Wren Evans", "Hoang Thuy Linh",
+    "Den Vau", "MONO", "Tang Duy Tan", "My Tam", "Bich Phuong",
+    "AMEE", "Erik", "Grey D", "Binz", "Jack J97",
+    "Obito", "Da LAB", "Phuong My Chi", "Vu Cat Tuong", "Bray",
+    "Noo Phuoc Thinh", "RPT MCK", "Duy Manh", "Bao Thy",
+    "Tuan Hung", "Ho Ngoc Ha", "Dong Nhi", "Lam Truong", "Dan Truong",
+    "Huong Tram", "Chi Pu", "MIN", "Only C", "Lou Hoang",
+    "Isaac", "Trung Quan", "Quang Ha", "Ha Anh Tuan", "Le Quyen",
+    "Duc Phuc", "Hua Kim Tuyen", "Thanh Hung", "Justatee", "Karik",
+    "B Ray", "Wxrdie", "Rhymastic", "Suboi", "LK",
 ]
 
-_GENRE_QUERIES = {
-    "pop":    ["vpop nhạc pop", "v-pop hit việt", "nhạc pop việt nam"],
-    "indie":  ["indie việt nam", "indie viet", "acoustic viet"],
-    "hiphop": ["rap việt", "rap viet", "hip-hop viet"],
-    "rock":   ["rock việt nam", "rock viet"],
+_GENRE_ARTISTS = {
+    "pop":    ["Son Tung MTP", "AMEE", "Erik", "MONO", "Wren Evans", "Tang Duy Tan",
+               "Bich Phuong", "Isaac", "Chi Pu", "Duc Phuc", "Hua Kim Tuyen",
+               "Ho Ngoc Ha", "My Tam", "Dong Nhi", "Lou Hoang"],
+    "indie":  ["Grey D", "Vu Cat Tuong", "Da LAB", "Ha Anh Tuan", "Bray",
+               "Phuong My Chi", "Trung Quan"],
+    "hiphop": ["HIEUTHUHAI", "tlinh", "Binz", "Den Vau", "Obito",
+               "RPT MCK", "Jack J97", "Only C", "Justatee", "Karik",
+               "B Ray", "Wxrdie", "Rhymastic", "Suboi", "LK"],
+    "rock":   ["Da LAB", "Bray", "Lam Truong"],
 }
 
 
@@ -37,38 +51,39 @@ async def _find_artist(client: httpx.AsyncClient, name: str) -> dict | None:
     return items[0] if items else None
 
 
+async def _random_track_from_artist(client: httpx.AsyncClient, artist_name: str) -> dict | None:
+    artist = await _find_artist(client, artist_name)
+    if not artist:
+        return None
+    resp = await client.get(f"{BASE}/artist/{artist['id']}/top", params={"limit": 50})
+    if resp.status_code != 200:
+        return None
+    tracks = [t for t in resp.json().get("data", []) if t.get("preview")]
+    if not tracks:
+        return None
+    return _track_fmt(random.choice(tracks), artist_override=artist)
+
+
 async def get_random_vietnamese_track(genre: str | None = None) -> dict:
-    queries = _GENRE_QUERIES.get(genre, SEARCH_QUERIES) if genre else SEARCH_QUERIES
-    q = random.choice(queries)
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(f"{BASE}/search", params={"q": q, "limit": 50})
-        resp.raise_for_status()
-        tracks = [t for t in resp.json().get("data", []) if t.get("preview")]
-        if not tracks:
-            raise RuntimeError("No eligible tracks found from Deezer")
-        return _track_fmt(random.choice(tracks))
+    pool = _GENRE_ARTISTS.get(genre, _VN_ARTISTS) if genre else _VN_ARTISTS
+    # Shuffle so we try different artists on retry
+    candidates = random.sample(pool, min(len(pool), 5))
+    async with httpx.AsyncClient(timeout=15) as client:
+        for artist_name in candidates:
+            result = await _random_track_from_artist(client, artist_name)
+            if result:
+                return result
+    raise RuntimeError("Could not find a previewable Vietnamese track")
 
 
 async def get_random_track_by_artists(artists: list[str]) -> dict:
-    artist_name = random.choice(artists)
+    candidates = random.sample(artists, min(len(artists), 5))
     async with httpx.AsyncClient(timeout=15) as client:
-        artist = await _find_artist(client, artist_name)
-        if not artist:
-            raise RuntimeError(f"No Deezer artist found for: {artist_name}")
-
-        resp = await client.get(f"{BASE}/artist/{artist['id']}/top", params={"limit": 50})
-        resp.raise_for_status()
-        tracks = [t for t in resp.json().get("data", []) if t.get("preview")]
-
-        if not tracks:
-            resp2 = await client.get(f"{BASE}/search", params={"q": artist_name, "limit": 50})
-            resp2.raise_for_status()
-            tracks = [t for t in resp2.json().get("data", []) if t.get("preview")]
-
-        if not tracks:
-            raise RuntimeError(f"No previewable tracks found for: {artist_name}")
-
-        return _track_fmt(random.choice(tracks), artist_override=artist)
+        for artist_name in candidates:
+            result = await _random_track_from_artist(client, artist_name)
+            if result:
+                return result
+    raise RuntimeError(f"No previewable tracks found for selected artists")
 
 
 async def get_artist_profiles(names: list[str]) -> list[dict]:
