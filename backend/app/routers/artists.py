@@ -78,7 +78,7 @@ def _apply_fallback(search: str, limit: int, offset: int) -> list:
 @router.get("/artists")
 async def list_artists(
     search: str = Query(default=""),
-    limit: int = Query(default=60, le=200),
+    limit: int = Query(default=60, le=1000),
     offset: int = Query(default=0),
 ):
     # Session is created inside try/except so DB failures are caught
