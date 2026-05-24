@@ -194,7 +194,15 @@ async def _resolve_avatar(name: str, deezer_artist: dict | None, ai: dict) -> st
 # Track storage
 # ---------------------------------------------------------------------------
 
-async def _store_tracks(tracks: list[dict]):
+async def _get_artist_id(name: str) -> int | None:
+    from app.database import AsyncSessionLocal
+    from app.models import Artist
+    from sqlalchemy import select
+    async with AsyncSessionLocal() as db:
+        return (await db.execute(select(Artist.id).where(Artist.name == name))).scalar_one_or_none()
+
+
+async def _store_tracks(tracks: list[dict], artist_id: int | None = None):
     from app.database import AsyncSessionLocal
     from app.models import Track
     from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -205,7 +213,8 @@ async def _store_tracks(tracks: list[dict]):
             {"id": f"{t['source']}:{t['source_id']}", "title": t["title"][:300],
              "artist_name": t["artist_name"], "source": t["source"],
              "source_id": t["source_id"], "cover_url": t.get("cover_url"),
-             "permalink_url": t.get("permalink_url")}
+             "permalink_url": t.get("permalink_url"),
+             "artist_id": artist_id}
             for t in tracks
         ]).on_conflict_do_nothing(index_elements=["id"])
         await db.execute(stmt)
@@ -306,7 +315,8 @@ async def seed_if_empty():
                         for t in dz:
                             t["artist_name"] = name
                         if dz:
-                            await _store_tracks(dz)
+                            db_artist_id = await _get_artist_id(name)
+                            await _store_tracks(dz, artist_id=db_artist_id)
                         avatar = artist.get("picture_medium") or artist.get("picture")
                         await _set_artist(name, avatar, playable=len(dz) > MIN_SONGS)
                 except Exception as e:
@@ -348,7 +358,8 @@ async def reseed_all(pages: int = 8) -> dict:
                 try:
                     tracks, avatar = await _resolve_artist(client, name)
                     if tracks:
-                        await _store_tracks(tracks)
+                        db_artist_id = await _get_artist_id(name)
+                        await _store_tracks(tracks, artist_id=db_artist_id)
                         await _set_artist(name, avatar, playable=True)
                         src = tracks[0]["source"]
                         stats[src] = stats.get(src, 0) + 1
