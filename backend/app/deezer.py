@@ -59,7 +59,7 @@ def _track_fmt(t: dict, artist_override: dict | None = None) -> dict:
     artist = artist_override or t.get("artist", {})
     album = t.get("album", {})
     return {
-        "id": str(t["id"]),
+        "id": f"deezer:{t['id']}",
         "title": t["title"],
         "artist": artist.get("name", ""),
         "cover_url": album.get("cover_medium") or artist.get("picture_medium", ""),
@@ -199,7 +199,7 @@ async def search_tracks(q: str, limit: int = 15) -> list[dict]:
         tracks = [t for t in resp.json().get("data", []) if t.get("preview")]
         return [
             {
-                "id": str(t["id"]),
+                "id": f"deezer:{t['id']}",
                 "title": t["title"],
                 "artist": t.get("artist", {}).get("name", ""),
             }
@@ -220,7 +220,7 @@ async def search_tracks_by_artists(q: str, artists: list[str], limit: int = 15) 
                 if tid not in seen and t.get("preview"):
                     seen.add(tid)
                     results.append({
-                        "id": tid,
+                        "id": f"deezer:{tid}",
                         "title": t["title"],
                         "artist": t.get("artist", {}).get("name", ""),
                     })

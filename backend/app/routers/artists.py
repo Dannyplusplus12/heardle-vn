@@ -86,7 +86,7 @@ async def list_artists(
     try:
         from app.database import AsyncSessionLocal
         async with AsyncSessionLocal() as db:
-            q = select(Artist).order_by(Artist.rank)
+            q = select(Artist).where(Artist.playable.is_(True)).order_by(Artist.rank)
             if search.strip():
                 q = q.where(Artist.name.ilike(f"%{search.strip()}%"))
             result = await db.execute(q.limit(limit).offset(offset))

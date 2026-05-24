@@ -18,8 +18,16 @@ _ADMIN_SECRET = os.getenv("ADMIN_SECRET", "heardle-vn-admin-2026")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
+        from sqlalchemy import text
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            # Idempotent migrations for pre-existing tables
+            await conn.execute(text(
+                "ALTER TABLE tracks ADD COLUMN IF NOT EXISTS source varchar(20) DEFAULT 'deezer'"))
+            await conn.execute(text(
+                "ALTER TABLE tracks ADD COLUMN IF NOT EXISTS source_id varchar(80)"))
+            await conn.execute(text(
+                "ALTER TABLE artists ADD COLUMN IF NOT EXISTS playable boolean NOT NULL DEFAULT true"))
     except Exception as e:
         print(f"[startup] DB unavailable, skipping table creation: {e}")
     asyncio.create_task(seed_if_empty())

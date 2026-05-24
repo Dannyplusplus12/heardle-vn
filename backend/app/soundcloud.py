@@ -178,6 +178,72 @@ async def search_tracks_by_artists(q: str, artists: list[str], limit: int = 15) 
     return [_fmt(t) for t in results[:limit]]
 
 
+async def _resolve_user(client: httpx.AsyncClient, name_or_url: str) -> dict | None:
+    """Resolve a SoundCloud user from a profile URL or by name search."""
+    if "soundcloud.com" in name_or_url:
+        try:
+            resp = await client.get(
+                f"{BASE}/resolve",
+                params={"url": name_or_url, "client_id": CLIENT_ID},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("kind") == "user":
+                    return data
+        except Exception:
+            pass
+    return await _find_user(client, name_or_url)
+
+
+async def get_artist_tracks(name_or_url: str, limit: int = 50) -> list[dict]:
+    """Return an artist's own SoundCloud uploads in normalized form (no remixes)."""
+    if not CLIENT_ID:
+        return []
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            user = await _resolve_user(client, name_or_url)
+            if not user:
+                return []
+            resp = await client.get(
+                f"{BASE}/users/{user['id']}/tracks",
+                params={"client_id": CLIENT_ID, "limit": limit},
+            )
+            if resp.status_code != 200:
+                return []
+            avatar = user.get("avatar_url") or ""
+            out = []
+            for t in resp.json().get("collection", []):
+                if not _no_remix(t):
+                    continue
+                if t.get("duration", 0) > _MAX_DURATION_MS:
+                    continue
+                out.append({
+                    "source": "soundcloud",
+                    "source_id": str(t["id"]),
+                    "title": t["title"],
+                    "artist": t.get("user", {}).get("username", ""),
+                    "cover_url": t.get("artwork_url") or avatar or None,
+                    "permalink_url": t.get("permalink_url"),
+                })
+            return out
+    except Exception:
+        return []
+
+
+async def get_artist_avatar(name_or_url: str) -> str | None:
+    if not CLIENT_ID:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            user = await _resolve_user(client, name_or_url)
+            if not user:
+                return None
+            avatar = user.get("avatar_url") or ""
+            return avatar.replace("-large.", "-t300x300.") if avatar else None
+    except Exception:
+        return None
+
+
 async def get_stream_url(track_id: str) -> str:
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(
