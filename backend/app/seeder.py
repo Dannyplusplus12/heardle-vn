@@ -208,11 +208,12 @@ async def seed_if_empty():
         from sqlalchemy import select, func
         from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-        # Skip if already seeded
+        # Skip only if BOTH tracks and artists are already populated
         async with AsyncSessionLocal() as db:
-            track_count = (await db.execute(select(func.count()).select_from(Track))).scalar()
-        if track_count and track_count >= 50:
-            log.info("[seeder] already seeded (%d tracks), skipping", track_count)
+            track_count = (await db.execute(select(func.count()).select_from(Track))).scalar() or 0
+            artist_count = (await db.execute(select(func.count()).select_from(Artist))).scalar() or 0
+        if track_count >= 200 and artist_count >= 50:
+            log.info("[seeder] already seeded (%d tracks, %d artists), skipping", track_count, artist_count)
             return
 
         log.info("[seeder] starting first-time DB seed")
