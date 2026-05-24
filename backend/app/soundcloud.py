@@ -33,7 +33,7 @@ def _strip_diacritics(text: str) -> str:
     ).lower().strip()
 
 
-_MAX_DURATION_MS = 7 * 60 * 1000  # 7 minutes
+_MAX_DURATION_MS = 10 * 60 * 1000  # 10 minutes
 
 
 def _is_eligible(track: dict) -> bool:
@@ -240,6 +240,34 @@ async def get_artist_avatar(name_or_url: str) -> str | None:
                 return None
             avatar = user.get("avatar_url") or ""
             return avatar.replace("-large.", "-t300x300.") if avatar else None
+    except Exception:
+        return None
+
+
+async def resolve_track(url: str) -> dict | None:
+    """Resolve a SoundCloud track URL to normalized track info for manual admin import."""
+    if not CLIENT_ID:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{BASE}/resolve",
+                params={"url": url, "client_id": CLIENT_ID},
+            )
+            if resp.status_code != 200:
+                return None
+            data = resp.json()
+            if data.get("kind") != "track":
+                return None
+            if data.get("duration", 0) > _MAX_DURATION_MS:
+                return None
+            return {
+                "source": "soundcloud",
+                "source_id": str(data["id"]),
+                "title": data.get("title", ""),
+                "cover_url": data.get("artwork_url"),
+                "permalink_url": data.get("permalink_url"),
+            }
     except Exception:
         return None
 

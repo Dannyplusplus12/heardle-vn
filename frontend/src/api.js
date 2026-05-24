@@ -113,6 +113,19 @@ export async function adminDeleteArtist(id) {
   return res.json()
 }
 
+export async function adminAddTrackToArtist(artistId, soundcloudUrl, title = null) {
+  const res = await fetch(`${API_BASE}/api/admin/artists/${artistId}/tracks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ soundcloud_url: soundcloudUrl, ...(title ? { title } : {}) }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || 'Lỗi thêm bài hát')
+  }
+  return res.json()
+}
+
 export async function adminRecrawlArtist(id) {
   const res = await fetch(`${API_BASE}/api/admin/artists/${id}/crawl`, {
     method: 'POST',

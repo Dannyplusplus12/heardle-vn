@@ -41,6 +41,8 @@ def _normalize(entry: dict) -> dict | None:
     title = entry.get("title")
     if not vid or not title or not _is_song(title):
         return None
+    if entry.get("duration", 0) >= 600:  # skip >= 10 minutes (vlogs, full albums)
+        return None
     return {
         "source": "youtube",
         "source_id": vid,

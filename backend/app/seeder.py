@@ -19,7 +19,7 @@ import httpx
 log = logging.getLogger(__name__)
 
 BASE = "https://api.deezer.com"
-MIN_SONGS = 10  # need MORE than this to keep an artist
+MIN_SONGS = 10  # need at least this many to mark artist as playable (Fan Cứng picker)
 
 VIBERATE_URL = "https://www.viberate.com/music-charts/top-artists-from-vietnam-{page}/"
 VIBERATE_HEADERS = {
@@ -109,13 +109,16 @@ async def _save_artists(artists: list[dict]):
             batch = artists[start:start + 200]
             stmt = pg_insert(Artist).values([
                 {"rank": a["rank"], "name": a["name"], "slug": a["slug"],
-                 "genre": a.get("genre"), "popularity": None, "avatar_url": None}
+                 "genre": a.get("genre"), "popularity": None, "avatar_url": None,
+                 "playable": False, "needs_manual_url": False}
                 for a in batch
             ]).on_conflict_do_update(
                 index_elements=["slug"],
                 set_={"rank": pg_insert(Artist).excluded.rank,
                       "name": pg_insert(Artist).excluded.name,
-                      "genre": pg_insert(Artist).excluded.genre},
+                      "genre": pg_insert(Artist).excluded.genre,
+                      "playable": False,
+                      "needs_manual_url": False},
             )
             await db.execute(stmt)
         await db.commit()
@@ -149,6 +152,8 @@ async def _deezer_tracks(client: httpx.AsyncClient, artist: dict, name: str) -> 
         out = []
         for t in resp.json().get("data", []):
             if not t.get("preview"):
+                continue
+            if t.get("duration", 0) >= 600:  # skip tracks >= 10 minutes
                 continue
             out.append({
                 "source": "deezer", "source_id": str(t["id"]),
@@ -246,10 +251,10 @@ async def _resolve_artist(client: httpx.AsyncClient, name: str) -> tuple[list[di
 
     if deezer_artist:
         dz = await _deezer_tracks(client, deezer_artist, name)
-        if len(dz) > MIN_SONGS:
-            chosen = dz
+        if len(dz) >= MIN_SONGS:
+            chosen = dz  # Deezer has enough — use it directly
 
-    # Deezer thin/missing → ask AI, then SoundCloud, then YouTube
+    # Deezer missing or thin → try SoundCloud then YouTube for a better pool
     if not chosen:
         from app.ai_verify import find_artist_sources
         ai = await find_artist_sources(name)
@@ -259,16 +264,20 @@ async def _resolve_artist(client: httpx.AsyncClient, name: str) -> tuple[list[di
         sc = await soundcloud.get_artist_tracks(sc_url, limit=50)
         for t in sc:
             t["artist"] = name
-        if len(sc) > MIN_SONGS:
-            chosen = sc
+        if sc:
+            chosen = sc  # take any SC tracks (even < MIN_SONGS)
 
         if not chosen:
             yt_url = ai.get("youtube_url") or name
             yt = await youtube.search_artist_tracks(yt_url, limit=40)
             for t in yt:
                 t["artist"] = name
-            if len(yt) > MIN_SONGS:
-                chosen = yt
+            if yt:
+                chosen = yt  # take any YT tracks (even < MIN_SONGS)
+
+        # Deezer had some tracks but SC/YT had none → fall back to Deezer's partial set
+        if not chosen and deezer_artist:
+            chosen = dz
 
     # Normalize artist_name key for storage
     for t in chosen:
@@ -314,11 +323,11 @@ async def seed_if_empty():
                         dz = await _deezer_tracks(client, artist, name)
                         for t in dz:
                             t["artist_name"] = name
+                        db_artist_id = await _get_artist_id(name)
                         if dz:
-                            db_artist_id = await _get_artist_id(name)
                             await _store_tracks(dz, artist_id=db_artist_id)
                         avatar = artist.get("picture_medium") or artist.get("picture")
-                        await _set_artist(name, avatar, playable=len(dz) > MIN_SONGS)
+                        await _set_artist(name, avatar, playable=len(dz) >= MIN_SONGS)
                 except Exception as e:
                     log.warning("[seeder] %s: %s", name, e)
                 await asyncio.sleep(0.4)
@@ -357,16 +366,15 @@ async def reseed_all(pages: int = 8) -> dict:
             for i, name in enumerate(names):
                 try:
                     tracks, avatar = await _resolve_artist(client, name)
+                    db_artist_id = await _get_artist_id(name)
                     if tracks:
-                        db_artist_id = await _get_artist_id(name)
                         await _store_tracks(tracks, artist_id=db_artist_id)
-                        await _set_artist(name, avatar, playable=True)
                         src = tracks[0]["source"]
                         stats[src] = stats.get(src, 0) + 1
                         stats["tracks"] += len(tracks)
                     else:
-                        await _set_artist(name, avatar, playable=False)
                         stats["skipped"] += 1
+                    await _set_artist(name, avatar, playable=len(tracks) >= MIN_SONGS)
                 except Exception as e:
                     log.warning("[reseed] %s: %s", name, e)
                     stats["skipped"] += 1

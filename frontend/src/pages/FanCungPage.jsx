@@ -6,6 +6,7 @@ import GameScreen from '../screens/GameScreen'
 import ArtistModal from '../components/admin/ArtistModal'
 import PlaylistModal from '../components/admin/PlaylistModal'
 import NeedsUrlPanel from '../components/admin/NeedsUrlPanel'
+import AddTrackModal from '../components/admin/AddTrackModal'
 
 // ── Utility ───────────────────────────────────────────────────────────────────
 
@@ -20,7 +21,7 @@ function getColor(id) {
 
 // ── Card components ───────────────────────────────────────────────────────────
 
-function ArtistCard({ artist, selected, onClick, onEdit, isAdmin, sizeCls = 'w-24 shrink-0' }) {
+function ArtistCard({ artist, selected, onClick, onEdit, onAddTrack, isAdmin, sizeCls = 'w-24 shrink-0' }) {
   return (
     <button
       onClick={onClick}
@@ -68,15 +69,24 @@ function ArtistCard({ artist, selected, onClick, onEdit, isAdmin, sizeCls = 'w-2
           <p className="text-[8px] text-gray-600 truncate">{artist.genre}</p>
         )}
       </div>
-      {/* Admin edit button */}
+      {/* Admin buttons */}
       {isAdmin && (
-        <button
-          onClick={e => { e.stopPropagation(); onEdit?.() }}
-          className="absolute top-1 left-1 w-5 h-5 bg-black/80 border border-white/30 text-white text-[9px] font-black
-            opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-amber-500 hover:border-amber-500"
-        >
-          ✎
-        </button>
+        <>
+          <button
+            onClick={e => { e.stopPropagation(); onEdit?.() }}
+            className="absolute top-1 left-1 w-5 h-5 bg-black/80 border border-white/30 text-white text-[9px] font-black
+              opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-amber-500 hover:border-amber-500"
+          >
+            ✎
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); onAddTrack?.() }}
+            className="absolute top-1 left-7 w-5 h-5 bg-black/80 border border-white/30 text-white text-[9px] font-black
+              opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-green-600 hover:border-green-500"
+          >
+            +
+          </button>
+        </>
       )}
     </button>
   )
@@ -208,6 +218,7 @@ function ArtistGrid({ artists, loading, selectedArtistIds, toggleArtist, setArti
                 selected={selectedArtistIds.has(a.id)}
                 onClick={() => toggleArtist(a.id)}
                 onEdit={() => setArtistModal({ artist: a })}
+                onAddTrack={() => setAddTrackModal(a)}
                 isAdmin={isAdmin}
                 sizeCls="w-full"
               />
@@ -261,6 +272,7 @@ export default function FanCungPage() {
   // Admin modals
   const [artistModal, setArtistModal] = useState(null)
   const [playlistModal, setPlaylistModal] = useState(null)
+  const [addTrackModal, setAddTrackModal] = useState(null) // artist object
   const [showNeedsUrl, setShowNeedsUrl] = useState(false)
 
   // Load data
@@ -416,6 +428,7 @@ export default function FanCungPage() {
                   selected={selectedArtistIds.has(a.id)}
                   onClick={() => toggleArtist(a.id)}
                   onEdit={() => setArtistModal({ artist: a })}
+                  onAddTrack={() => setAddTrackModal(a)}
                   isAdmin={isAdmin}
                 />
               ))}
@@ -568,6 +581,13 @@ export default function FanCungPage() {
       {showNeedsUrl && (
         <NeedsUrlPanel
           onClose={() => setShowNeedsUrl(false)}
+          onSaved={() => loadArtists()}
+        />
+      )}
+      {addTrackModal && (
+        <AddTrackModal
+          artist={addTrackModal}
+          onClose={() => setAddTrackModal(null)}
           onSaved={() => loadArtists()}
         />
       )}

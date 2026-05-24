@@ -193,6 +193,61 @@ async def delete_artist(artist_id: int, admin: User = Depends(require_admin)):
     return {"deleted": artist_id}
 
 
+class AddTrackBody(BaseModel):
+    soundcloud_url: str
+    title: str | None = None  # optional override; auto-detected from SC if omitted
+
+
+@router.post("/artists/{artist_id}/tracks", status_code=201)
+async def add_track_to_artist(
+    artist_id: int,
+    body: AddTrackBody,
+    admin: User = Depends(require_admin),
+):
+    from app import soundcloud
+    from app.models import Track
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+    async with AsyncSessionLocal() as db:
+        artist = await db.get(Artist, artist_id)
+        if not artist:
+            raise HTTPException(status_code=404, detail="Artist not found")
+
+    track_info = await soundcloud.resolve_track(body.soundcloud_url)
+    if not track_info:
+        raise HTTPException(status_code=422, detail="Could not resolve SoundCloud URL — check the URL or track duration (must be < 10 min)")
+
+    if body.title:
+        track_info["title"] = body.title
+
+    track_id = f"{track_info['source']}:{track_info['source_id']}"
+    async with AsyncSessionLocal() as db:
+        stmt = pg_insert(Track).values(
+            id=track_id,
+            title=track_info["title"][:300],
+            artist_name=artist.name,
+            artist_id=artist_id,
+            source=track_info["source"],
+            source_id=track_info["source_id"],
+            cover_url=track_info.get("cover_url"),
+            permalink_url=track_info.get("permalink_url"),
+        ).on_conflict_do_nothing(index_elements=["id"])
+        await db.execute(stmt)
+
+        # Recount and update playable flag
+        from sqlalchemy import func as sqlfunc
+        track_count = (await db.execute(
+            select(sqlfunc.count()).select_from(Track).where(Track.artist_id == artist_id)
+        )).scalar_one()
+        artist_row = await db.get(Artist, artist_id)
+        if artist_row:
+            from app.seeder import MIN_SONGS
+            artist_row.playable = track_count >= MIN_SONGS
+        await db.commit()
+
+    return {"track_id": track_id, "title": track_info["title"], "artist_id": artist_id}
+
+
 @router.post("/artists/{artist_id}/crawl")
 async def recrawl_artist(artist_id: int, admin: User = Depends(require_admin)):
     from app.crawler import crawl_artist_deezer, crawl_artist_soundcloud, crawl_artist_youtube
