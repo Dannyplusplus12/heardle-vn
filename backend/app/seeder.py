@@ -301,3 +301,93 @@ async def seed_if_empty():
 
     except Exception as e:
         log.error("[seeder] fatal error: %s", e)
+
+
+# ---------------------------------------------------------------------------
+# Full reseed — called by the admin endpoint, always runs all pages
+# ---------------------------------------------------------------------------
+
+_reseed_running = False
+
+
+async def reseed_all(pages: int = 8) -> dict:
+    global _reseed_running
+    if _reseed_running:
+        return {"status": "already_running"}
+    _reseed_running = True
+    try:
+        from app.database import AsyncSessionLocal
+        from app.models import Artist, Track
+        from sqlalchemy import select
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+        # Crawl all Viberate pages
+        async with httpx.AsyncClient(timeout=25) as client:
+            vib_artists = await _crawl_viberate(client, pages=pages)
+
+        if not vib_artists:
+            log.warning("[reseed] Viberate crawl returned 0 artists")
+            return {"status": "error", "detail": "Viberate returned no artists"}
+
+        await _save_viberate_artists(vib_artists)
+        names = [a["name"] for a in vib_artists]
+        log.info("[reseed] crawled %d artists, now seeding Deezer data", len(names))
+
+        seeded_tracks = 0
+        seeded_avatars = 0
+
+        async with httpx.AsyncClient(timeout=15) as client:
+            for i, name in enumerate(names):
+                try:
+                    artist = await _find_artist(client, name)
+                    if not artist:
+                        await asyncio.sleep(0.3)
+                        continue
+
+                    avatar = artist.get("picture_medium") or artist.get("picture")
+                    tracks = await _top_tracks(client, artist["id"])
+
+                    async with AsyncSessionLocal() as db:
+                        if avatar:
+                            row = (await db.execute(
+                                select(Artist).where(Artist.name == name)
+                            )).scalar_one_or_none()
+                            if row and not row.avatar_url:
+                                row.avatar_url = avatar
+                                seeded_avatars += 1
+
+                        if tracks:
+                            stmt = pg_insert(Track).values([
+                                {
+                                    "id": str(t["id"]),
+                                    "title": t["title"],
+                                    "artist_name": name,
+                                    "cover_url": (
+                                        t.get("album", {}).get("cover_medium")
+                                        or artist.get("picture_medium")
+                                    ),
+                                    "permalink_url": t.get("link"),
+                                }
+                                for t in tracks
+                            ]).on_conflict_do_nothing(index_elements=["id"])
+                            await db.execute(stmt)
+                            seeded_tracks += len(tracks)
+
+                        await db.commit()
+
+                    if (i + 1) % 50 == 0:
+                        log.info("[reseed] progress %d/%d", i + 1, len(names))
+                except Exception as e:
+                    log.warning("[reseed] skipped %s: %s", name, e)
+
+                await asyncio.sleep(0.4)
+
+        log.info("[reseed] complete — %d tracks, %d avatars", seeded_tracks, seeded_avatars)
+        return {
+            "status": "ok",
+            "artists_crawled": len(names),
+            "tracks_seeded": seeded_tracks,
+            "avatars_updated": seeded_avatars,
+        }
+    finally:
+        _reseed_running = False
