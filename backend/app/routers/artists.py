@@ -1,8 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import select
 
-from app.database import get_db
 from app.deezer import get_artist_profiles
 from app.models import Artist
 
@@ -25,26 +23,33 @@ _FALLBACK_ARTISTS = [
 ]
 
 
+def _apply_fallback(search: str, limit: int, offset: int) -> list:
+    filtered = _FALLBACK_ARTISTS
+    if search.strip():
+        s = search.strip().lower()
+        filtered = [a for a in _FALLBACK_ARTISTS if s in a["name"].lower()]
+    return filtered[offset:offset + limit]
+
+
 @router.get("/artists")
 async def list_artists(
     search: str = Query(default=""),
     limit: int = Query(default=60, le=200),
     offset: int = Query(default=0),
-    db: AsyncSession = Depends(get_db),
 ):
+    # Session is created inside try/except so DB failures are caught
+    # and CORS middleware always gets a proper response to wrap.
     try:
-        q = select(Artist).order_by(Artist.rank)
-        if search.strip():
-            q = q.where(Artist.name.ilike(f"%{search.strip()}%"))
-        result = await db.execute(q.limit(limit).offset(offset))
-        artists = result.scalars().all()
-
-        if not artists and offset == 0:
-            filtered = _FALLBACK_ARTISTS
+        from app.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
+            q = select(Artist).order_by(Artist.rank)
             if search.strip():
-                s = search.strip().lower()
-                filtered = [a for a in _FALLBACK_ARTISTS if s in a["name"].lower()]
-            return filtered[:limit]
+                q = q.where(Artist.name.ilike(f"%{search.strip()}%"))
+            result = await db.execute(q.limit(limit).offset(offset))
+            rows = result.scalars().all()
+
+        if not rows and offset == 0:
+            return _apply_fallback(search, limit, 0)
 
         return [
             {
@@ -56,14 +61,10 @@ async def list_artists(
                 "popularity": a.popularity,
                 "avatar_url": a.avatar_url,
             }
-            for a in artists
+            for a in rows
         ]
     except Exception:
-        filtered = _FALLBACK_ARTISTS
-        if search.strip():
-            s = search.strip().lower()
-            filtered = [a for a in _FALLBACK_ARTISTS if s in a["name"].lower()]
-        return filtered[:limit]
+        return _apply_fallback(search, limit, offset)
 
 
 @router.get("/artists/profiles")

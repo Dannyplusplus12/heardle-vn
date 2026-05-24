@@ -142,8 +142,8 @@ export default function ArtistScreen({ onStart }) {
       {/* ── Grid ── */}
       <div className="flex-1 min-h-0 overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
         {loading ? (
-          <div className="grid grid-cols-5 gap-2">
-            {Array.from({ length: 20 }).map((_, i) => (
+          <div className="grid grid-cols-8 gap-1.5">
+            {Array.from({ length: 24 }).map((_, i) => (
               <div key={i} className="aspect-[3/4] bg-white/5 animate-pulse" />
             ))}
           </div>
@@ -153,7 +153,7 @@ export default function ArtistScreen({ onStart }) {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-8 gap-1.5">
               {artists.map(artist => {
                 const isSelected = selected.has(artist.id)
                 const avatarUrl = avatars[artist.name] || artist.avatar_url
@@ -164,7 +164,7 @@ export default function ArtistScreen({ onStart }) {
                     className={`
                       relative flex flex-col overflow-hidden cursor-pointer transition-all duration-150 group text-left
                       ${isSelected
-                        ? 'ring-2 ring-amber-400 shadow-[0_0_18px_rgba(251,191,36,0.3)]'
+                        ? 'ring-2 ring-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
                         : 'ring-1 ring-white/8 hover:ring-white/30'
                       }
                     `}
@@ -182,45 +182,36 @@ export default function ArtistScreen({ onStart }) {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <span className="text-3xl font-black text-white/30 select-none">
+                          <span className="text-xl font-black text-white/30 select-none">
                             {getInitials(artist.name)}
                           </span>
                         </div>
                       )}
 
                       {/* Cinematic gradient */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
 
                       {/* Rank badge */}
-                      <div className="absolute top-1.5 left-1.5 bg-black/60 px-1.5 py-0.5 backdrop-blur-sm">
-                        <span className="text-[9px] font-bold text-amber-400">#{artist.rank}</span>
+                      <div className="absolute top-1 left-1 bg-black/60 px-1 py-px">
+                        <span className="text-[8px] font-bold text-amber-400">#{artist.rank}</span>
                       </div>
-
-                      {/* Genre badge */}
-                      {artist.genre && (
-                        <div className="absolute bottom-9 left-1.5">
-                          <span className="text-[8px] font-semibold uppercase tracking-wider text-white/50">
-                            {artist.genre}
-                          </span>
-                        </div>
-                      )}
 
                       {/* Selected overlay */}
                       {isSelected && (
-                        <div className="absolute inset-0 bg-amber-400/8 pointer-events-none" />
+                        <div className="absolute inset-0 bg-amber-400/10 pointer-events-none" />
                       )}
 
                       {/* Checkmark */}
                       {isSelected && (
-                        <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-amber-400 flex items-center justify-center shadow-md">
-                          <span className="text-[10px] text-black font-black leading-none">✓</span>
+                        <div className="absolute top-1 right-1 w-4 h-4 bg-amber-400 flex items-center justify-center">
+                          <span className="text-[8px] text-black font-black leading-none">✓</span>
                         </div>
                       )}
                     </div>
 
                     {/* Name strip */}
-                    <div className={`px-2 py-1.5 shrink-0 transition-colors duration-150 ${isSelected ? 'bg-amber-950/60' : 'bg-[#111]'}`}>
-                      <p className={`text-[10px] font-bold leading-tight truncate ${isSelected ? 'text-amber-300' : 'text-gray-300'}`}>
+                    <div className={`px-1.5 py-1 shrink-0 transition-colors duration-150 ${isSelected ? 'bg-amber-950/60' : 'bg-[#111]'}`}>
+                      <p className={`text-[9px] font-bold leading-tight truncate ${isSelected ? 'text-amber-300' : 'text-gray-300'}`}>
                         {artist.name}
                       </p>
                     </div>
