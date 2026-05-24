@@ -1,6 +1,6 @@
 # Heardle VN
 
-Vietnamese music guessing game — Heardle clone using Spotify API.
+Vietnamese music guessing game — Heardle clone.
 
 ## Tech Stack
 - Backend: FastAPI + SQLAlchemy (asyncpg) + PostgreSQL
@@ -44,15 +44,14 @@ docker-compose up --build
 
 | Variable | Where | Description |
 |---|---|---|
-| `SPOTIFY_CLIENT_ID` | backend | From Spotify Developer Dashboard |
-| `SPOTIFY_CLIENT_SECRET` | backend | From Spotify Developer Dashboard |
 | `DATABASE_URL` | backend | postgresql+asyncpg://... (auto-set on Railway) |
 | `FRONTEND_ORIGIN` | backend | CORS origin, e.g. http://localhost:5173 |
 | `JWT_SECRET` | backend | Secret for signing JWT tokens |
 | `GOOGLE_CLIENT_ID` | backend | From Google Cloud Console OAuth 2.0 |
 | `ADMIN_EMAILS` | backend | Comma-separated admin emails, e.g. huyh13530@gmail.com |
+| `ADMIN_SECRET` | backend | Secret for `/api/admin/reseed` endpoint (default: heardle-vn-admin-2026) |
 | `VITE_API_URL` | frontend | Backend URL, e.g. http://localhost:8000 |
-| `VITE_GOOGLE_CLIENT_ID` | frontend | Same as GOOGLE_CLIENT_ID (for OAuth button) |
+| `VITE_GOOGLE_CLIENT_ID` | frontend | Same as GOOGLE_CLIENT_ID — must be set as Railway build var (baked into bundle) |
 
 ## Routes
 
@@ -76,6 +75,15 @@ docker-compose up --build
    - Deezer: 0 tracks → flag `needs_manual_url=True`; 1–5 tracks → low activity skip; 6+ → save tracks
    - SoundCloud/YouTube URLs → crawl via yt-dlp if provided
 4. "⚠ URL" button shows artists flagged as needing manual URL input
+
+## Bulk Reseed
+- Endpoint: `GET /api/admin/reseed?secret=heardle-vn-admin-2026&pages=8`
+- Deletes all tracks, re-crawls all Viberate pages (default 8), resolves each artist via Deezer → SoundCloud → YouTube
+- Runs as a background asyncio task — killed if the backend container restarts (Railway redeploy)
+- **Frontend deploys are safe** during reseed (separate Railway service, doesn't touch the backend process)
+- **Backend deploys kill the reseed** — re-trigger the endpoint afterward if needed
+- Tracks always store `artist_id` (FK to artists table) so pool queries (Fan Cứng) work correctly
+- Reseed is only needed when: refreshing the full catalog, or after a crawl logic change. Normal feature deploys never need it.
 
 ## UI Style — Neo-Brutalism (dark)
 Fan Cứng page and admin modals use Neo-Brutalism on a dark background:
@@ -102,5 +110,11 @@ Fan Cứng page and admin modals use Neo-Brutalism on a dark background:
 | `POST /api/admin/artists` | Create + auto-crawl (admin only) |
 | `PUT /api/admin/artists/{id}` | Edit + re-crawl if URL changed (admin only) |
 | `POST /api/admin/artists/{id}/crawl` | Manual re-crawl trigger |
+| `GET /api/admin/artists` | List all artists; `?needs_url=true` filters flagged ones |
+| `GET /api/admin/artists/needs-url-count` | Count of artists needing manual URL |
 | `POST /api/admin/playlists` | Create playlist (admin only) |
+| `PUT /api/admin/playlists/{id}` | Edit playlist metadata |
+| `DELETE /api/admin/playlists/{id}` | Delete playlist |
 | `POST /api/admin/playlists/{id}/tracks` | Add track to playlist |
+| `DELETE /api/admin/playlists/{id}/tracks/{pt_id}` | Remove track from playlist |
+| `GET /api/admin/reseed` | Bulk reseed — requires `?secret=` query param |
