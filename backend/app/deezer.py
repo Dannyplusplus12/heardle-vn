@@ -1,8 +1,32 @@
 import asyncio
 import random
+import re
 import httpx
 
 BASE = "https://api.deezer.com"
+
+
+def _clean_artist_name(name: str) -> str:
+    """Strip disambiguation suffixes that confuse Deezer search."""
+    # Remove "a.k.a ALIAS" or "aka ALIAS"
+    name = re.sub(r'\ba\.?k\.?a\.?\s+\S+.*', '', name, flags=re.IGNORECASE)
+    # Remove trailing parentheticals like "(official)" or "(VN)"
+    name = re.sub(r'\s*\(.*?\)\s*', ' ', name)
+    # Collapse extra whitespace
+    return name.strip()
+
+
+def _name_matches(query: str, result_name: str) -> bool:
+    """
+    True if the Deezer result is a plausible match for our query.
+    Requires at least one meaningful word (>2 chars) to overlap,
+    which filters out totally unrelated artists while allowing
+    diacritic differences (e.g. "Den Vau" vs "Đen Vâu").
+    """
+    def words(s: str) -> set[str]:
+        return {w for w in re.sub(r'[^a-z0-9\s]', '', s.lower()).split() if len(w) > 2}
+
+    return bool(words(query) & words(result_name))
 
 # Curated Vietnamese artist pool — random mode picks from here to guarantee VN music
 _VN_ARTISTS = [
@@ -44,11 +68,19 @@ def _track_fmt(t: dict, artist_override: dict | None = None) -> dict:
 
 
 async def _find_artist(client: httpx.AsyncClient, name: str) -> dict | None:
-    resp = await client.get(f"{BASE}/search/artist", params={"q": name, "limit": 5})
+    clean = _clean_artist_name(name)
+    resp = await client.get(f"{BASE}/search/artist", params={"q": clean, "limit": 10})
     if resp.status_code != 200:
         return None
     items = resp.json().get("data", [])
-    return items[0] if items else None
+    if not items:
+        return None
+    # Prefer a result whose name shares at least one meaningful word with our query
+    for item in items:
+        if _name_matches(clean, item.get("name", "")):
+            return item
+    # Nothing matched — return None rather than a wrong artist's photo
+    return None
 
 
 async def _random_track_from_artist(client: httpx.AsyncClient, artist_name: str) -> dict | None:

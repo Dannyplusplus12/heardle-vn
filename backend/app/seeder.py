@@ -176,11 +176,16 @@ async def _save_viberate_artists(artists: list[dict]):
 
 async def _find_artist(client: httpx.AsyncClient, name: str) -> dict | None:
     try:
-        resp = await client.get(f"{BASE}/search/artist", params={"q": name, "limit": 3})
+        from app.deezer import _clean_artist_name, _name_matches
+        clean = _clean_artist_name(name)
+        resp = await client.get(f"{BASE}/search/artist", params={"q": clean, "limit": 10})
         if resp.status_code != 200:
             return None
         items = resp.json().get("data", [])
-        return items[0] if items else None
+        for item in items:
+            if _name_matches(clean, item.get("name", "")):
+                return item
+        return None
     except Exception:
         return None
 
@@ -352,7 +357,7 @@ async def reseed_all(pages: int = 8) -> dict:
                             row = (await db.execute(
                                 select(Artist).where(Artist.name == name)
                             )).scalar_one_or_none()
-                            if row and not row.avatar_url:
+                            if row and row.avatar_url != avatar:
                                 row.avatar_url = avatar
                                 seeded_avatars += 1
 
