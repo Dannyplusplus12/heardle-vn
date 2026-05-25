@@ -589,8 +589,6 @@ export default function RoomScreen({ code, token, onLeave }) {
     return () => { cleanup?.(); room.disconnect() }
   }, [code, token]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isGamePhase = ['loading', 'countdown', 'playing'].includes(room.phase)
-
   return (
     <div className="flex h-full bg-[#070707] relative">
 
