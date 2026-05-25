@@ -25,7 +25,7 @@ async def _random_from_genre(genre: str | None, difficulty: str | None = None) -
 
     async with AsyncSessionLocal() as db:
         # Build artist filter for genre
-        artist_q = select(Artist.id)
+        artist_q = select(Artist.id).where(Artist.in_random.is_(True))
         if genre and genre != "all":
             if genre == "pop":
                 artist_q = artist_q.where(sqlfunc.lower(Artist.genre).contains("pop"))

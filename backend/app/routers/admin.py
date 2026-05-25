@@ -37,6 +37,8 @@ class ArtistUpdate(BaseModel):
     youtube_url: str | None = None
     playable: bool | None = None
     needs_manual_url: bool | None = None
+    visible: bool | None = None
+    in_random: bool | None = None
 
 
 def _artist_dict(a: Artist) -> dict:
@@ -52,6 +54,8 @@ def _artist_dict(a: Artist) -> dict:
         "youtube_url": a.youtube_url,
         "needs_manual_url": a.needs_manual_url,
         "playable": a.playable,
+        "visible": getattr(a, "visible", True),
+        "in_random": getattr(a, "in_random", True),
     }
 
 
@@ -163,6 +167,10 @@ async def update_artist(
             artist.playable = body.playable
         if body.needs_manual_url is not None:
             artist.needs_manual_url = body.needs_manual_url
+        if body.visible is not None:
+            artist.visible = body.visible
+        if body.in_random is not None:
+            artist.in_random = body.in_random
 
         await db.commit()
         await db.refresh(artist)
@@ -234,6 +242,37 @@ async def delete_artist_track(
             artist_row.playable = track_count >= MIN_SONGS
         await db.commit()
     return {"deleted": track_id}
+
+
+class UpdateTrackBody(BaseModel):
+    title: str | None = None
+    cover_url: str | None = None
+
+
+@router.put("/artists/{artist_id}/tracks/{track_id:path}")
+async def update_artist_track(
+    artist_id: int,
+    track_id: str,
+    body: UpdateTrackBody,
+    admin: User = Depends(require_admin),
+):
+    async with AsyncSessionLocal() as db:
+        track = await db.get(Track, track_id)
+        if not track or track.artist_id != artist_id:
+            raise HTTPException(status_code=404, detail="Track not found")
+        if body.title is not None:
+            track.title = body.title[:300]
+        if body.cover_url is not None:
+            track.cover_url = body.cover_url or None
+        await db.commit()
+        return {
+            "id": track.id,
+            "title": track.title,
+            "cover_url": track.cover_url,
+            "source": track.source,
+            "source_id": track.source_id,
+            "permalink_url": track.permalink_url,
+        }
 
 
 class AddArtistTrackBody(BaseModel):

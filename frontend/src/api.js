@@ -153,6 +153,16 @@ export async function adminAddArtistTrack(artistId, { soundcloud_url, deezer_url
   return res.json()
 }
 
+export async function adminUpdateArtistTrack(artistId, trackId, { title, cover_url } = {}) {
+  const res = await fetch(`${API_BASE}/api/admin/artists/${artistId}/tracks/${encodeURIComponent(trackId)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ title, cover_url }),
+  })
+  if (!res.ok) throw new Error('Lỗi cập nhật bài hát')
+  return res.json()
+}
+
 export async function adminDeleteArtistTrack(artistId, trackId) {
   const res = await fetch(`${API_BASE}/api/admin/artists/${artistId}/tracks/${encodeURIComponent(trackId)}`, {
     method: 'DELETE',

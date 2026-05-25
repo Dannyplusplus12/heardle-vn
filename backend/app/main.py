@@ -33,6 +33,8 @@ async def lifespan(app: FastAPI):
                 "ALTER TABLE artists ADD COLUMN IF NOT EXISTS soundcloud_url text",
                 "ALTER TABLE artists ADD COLUMN IF NOT EXISTS youtube_url text",
                 "ALTER TABLE artists ADD COLUMN IF NOT EXISTS needs_manual_url boolean NOT NULL DEFAULT false",
+                "ALTER TABLE artists ADD COLUMN IF NOT EXISTS visible boolean NOT NULL DEFAULT true",
+                "ALTER TABLE artists ADD COLUMN IF NOT EXISTS in_random boolean NOT NULL DEFAULT true",
                 # Backfill artist_id on existing tracks by matching artist_name → artists.name
                 """
                 UPDATE tracks t
