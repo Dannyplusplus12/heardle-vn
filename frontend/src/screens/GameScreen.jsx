@@ -73,9 +73,10 @@ export default function GameScreen({
       <header className="flex items-center justify-between mb-5">
         <button
           onClick={onBack}
-          className="text-xs font-bold uppercase tracking-wider text-gray-600 hover:text-gray-300 transition-colors"
+          className="text-lg font-bold text-gray-600 hover:text-gray-300 transition-colors w-8 text-left"
+          aria-label="Quay lại"
         >
-          ← {isFanMode ? 'Đổi nguồn' : 'Đổi thể loại'}
+          ←
         </button>
         <span className={`text-xs font-black uppercase tracking-widest px-3 py-1 border-2 ${pc.borderCls} ${pc.labelCls}`}>
           {isFanMode ? '⭐ FAN CỨNG' : (GENRE_LABELS[genre] || 'NGẪU NHIÊN')}

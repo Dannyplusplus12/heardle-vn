@@ -153,6 +153,34 @@ function SectionHeader({ label, action }) {
   )
 }
 
+// ── Genre filter bar ─────────────────────────────────────────────────────────
+
+const GENRE_FILTERS = [
+  { id: 'all',    label: 'Tất cả' },
+  { id: 'pop',    label: 'Pop' },
+  { id: 'hiphop', label: 'Hip-Hop & Rap' },
+]
+
+function GenreFilterBar({ value, onChange }) {
+  return (
+    <div className="flex gap-1.5 px-6 mb-3">
+      {GENRE_FILTERS.map(g => (
+        <button
+          key={g.id}
+          onClick={() => onChange(g.id)}
+          className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 border-2 transition-colors
+            ${value === g.id
+              ? 'border-amber-400 bg-amber-400/15 text-amber-300'
+              : 'border-white/10 text-gray-600 hover:border-white/25 hover:text-gray-400'
+            }`}
+        >
+          {g.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ── Artist grid with accordion ────────────────────────────────────────────────
 
 // Card min-width is 96px. Card total height ≈ 96px (image) + 36px (label + borders) = 132px.
@@ -265,6 +293,9 @@ export default function FanCungPage() {
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const debounceRef = useRef(null)
 
+  // Genre filter
+  const [genreFilter, setGenreFilter] = useState('all')
+
   // Selection
   const [selectedArtistIds, setSelectedArtistIds] = useState(new Set())
   const [selectedPlaylistIds, setSelectedPlaylistIds] = useState(new Set())
@@ -306,6 +337,15 @@ export default function FanCungPage() {
   const matchedArtists = debouncedQuery
     ? artists.filter(a => a.name.toLowerCase().includes(debouncedQuery.toLowerCase()))
     : []
+
+  const genreFilteredArtists = genreFilter === 'all'
+    ? artists
+    : artists.filter(a => {
+        const g = (a.genre || '').toLowerCase()
+        if (genreFilter === 'pop') return g.includes('pop')
+        if (genreFilter === 'hiphop') return g.includes('hip') || g.includes('rap')
+        return true
+      })
   const matchedPlaylists = debouncedQuery
     ? playlists.filter(p => p.name.toLowerCase().includes(debouncedQuery.toLowerCase()))
     : []
@@ -446,8 +486,11 @@ export default function FanCungPage() {
           )}
 
           {/* Artist grid with accordion */}
+          {!debouncedQuery && (
+            <GenreFilterBar value={genreFilter} onChange={setGenreFilter} />
+          )}
           <ArtistGrid
-            artists={artists}
+            artists={debouncedQuery ? artists : genreFilteredArtists}
             loading={loadingArtists}
             selectedArtistIds={selectedArtistIds}
             toggleArtist={toggleArtist}

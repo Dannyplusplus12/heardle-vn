@@ -96,6 +96,27 @@ async def _random_track_from_artist(client: httpx.AsyncClient, artist_name: str)
     return _track_fmt(random.choice(tracks), artist_override=artist)
 
 
+async def resolve_deezer_track(url_or_id: str) -> dict | None:
+    """Resolve a Deezer track URL or bare ID to saveable track info."""
+    m = re.search(r'/track/(\d+)', url_or_id)
+    track_id = m.group(1) if m else url_or_id.strip()
+    async with httpx.AsyncClient(timeout=20) as client:
+        r = await client.get(f"{BASE}/track/{track_id}")
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        if data.get("error") or not data.get("preview"):
+            return None
+        return {
+            "source": "deezer",
+            "source_id": str(data["id"]),
+            "title": data["title"],
+            "artist_name": data.get("artist", {}).get("name", ""),
+            "cover_url": data.get("album", {}).get("cover_xl", ""),
+            "permalink_url": data.get("link", ""),
+        }
+
+
 async def get_random_vietnamese_track(genre: str | None = None) -> dict:
     pool = _GENRE_ARTISTS.get(genre, _VN_ARTISTS) if genre else _VN_ARTISTS
     # Shuffle so we try different artists on retry

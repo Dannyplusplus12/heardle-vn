@@ -193,29 +193,85 @@ async def delete_artist(artist_id: int, admin: User = Depends(require_admin)):
     return {"deleted": artist_id}
 
 
-class AddTrackBody(BaseModel):
-    soundcloud_url: str
-    title: str | None = None  # optional override; auto-detected from SC if omitted
+@router.get("/artists/{artist_id}/tracks")
+async def list_artist_tracks(artist_id: int, admin: User = Depends(require_admin)):
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Track).where(Track.artist_id == artist_id).order_by(Track.title)
+        )
+        return [
+            {
+                "id": t.id,
+                "title": t.title,
+                "source": t.source,
+                "source_id": t.source_id,
+                "cover_url": t.cover_url,
+                "permalink_url": t.permalink_url,
+            }
+            for t in result.scalars().all()
+        ]
+
+
+@router.delete("/artists/{artist_id}/tracks/{track_id:path}")
+async def delete_artist_track(
+    artist_id: int,
+    track_id: str,
+    admin: User = Depends(require_admin),
+):
+    async with AsyncSessionLocal() as db:
+        track = await db.get(Track, track_id)
+        if not track or track.artist_id != artist_id:
+            raise HTTPException(status_code=404, detail="Track not found")
+        await db.delete(track)
+
+        from sqlalchemy import func as sqlfunc
+        from app.seeder import MIN_SONGS
+        track_count = (await db.execute(
+            select(sqlfunc.count()).select_from(Track).where(Track.artist_id == artist_id)
+        )).scalar_one()
+        artist_row = await db.get(Artist, artist_id)
+        if artist_row:
+            artist_row.playable = track_count >= MIN_SONGS
+        await db.commit()
+    return {"deleted": track_id}
+
+
+class AddArtistTrackBody(BaseModel):
+    soundcloud_url: str | None = None
+    deezer_url: str | None = None
+    title: str | None = None
 
 
 @router.post("/artists/{artist_id}/tracks", status_code=201)
 async def add_track_to_artist(
     artist_id: int,
-    body: AddTrackBody,
+    body: AddArtistTrackBody,
     admin: User = Depends(require_admin),
 ):
     from app import soundcloud
     from app.models import Track
     from sqlalchemy.dialects.postgresql import insert as pg_insert
+    from sqlalchemy import func as sqlfunc
+    from app.seeder import MIN_SONGS
 
     async with AsyncSessionLocal() as db:
         artist = await db.get(Artist, artist_id)
         if not artist:
             raise HTTPException(status_code=404, detail="Artist not found")
+        artist_name = artist.name
 
-    track_info = await soundcloud.resolve_track(body.soundcloud_url)
-    if not track_info:
-        raise HTTPException(status_code=422, detail="Could not resolve SoundCloud URL — check the URL or track duration (must be < 10 min)")
+    if body.deezer_url:
+        from app.deezer import resolve_deezer_track
+        track_info = await resolve_deezer_track(body.deezer_url)
+        if not track_info:
+            raise HTTPException(status_code=422, detail="Could not resolve Deezer URL — check the URL and ensure the track has a preview")
+        track_info["artist_name"] = artist_name
+    elif body.soundcloud_url:
+        track_info = await soundcloud.resolve_track(body.soundcloud_url)
+        if not track_info:
+            raise HTTPException(status_code=422, detail="Could not resolve SoundCloud URL — check the URL or track duration (must be < 10 min)")
+    else:
+        raise HTTPException(status_code=422, detail="Provide soundcloud_url or deezer_url")
 
     if body.title:
         track_info["title"] = body.title
@@ -225,7 +281,7 @@ async def add_track_to_artist(
         stmt = pg_insert(Track).values(
             id=track_id,
             title=track_info["title"][:300],
-            artist_name=artist.name,
+            artist_name=artist_name,
             artist_id=artist_id,
             source=track_info["source"],
             source_id=track_info["source_id"],
@@ -234,14 +290,11 @@ async def add_track_to_artist(
         ).on_conflict_do_nothing(index_elements=["id"])
         await db.execute(stmt)
 
-        # Recount and update playable flag
-        from sqlalchemy import func as sqlfunc
         track_count = (await db.execute(
             select(sqlfunc.count()).select_from(Track).where(Track.artist_id == artist_id)
         )).scalar_one()
         artist_row = await db.get(Artist, artist_id)
         if artist_row:
-            from app.seeder import MIN_SONGS
             artist_row.playable = track_count >= MIN_SONGS
         await db.commit()
 
@@ -249,7 +302,11 @@ async def add_track_to_artist(
 
 
 @router.post("/artists/{artist_id}/crawl")
-async def recrawl_artist(artist_id: int, admin: User = Depends(require_admin)):
+async def recrawl_artist(
+    artist_id: int,
+    source: str | None = None,  # 'deezer' | 'soundcloud' | 'youtube' | None (all)
+    admin: User = Depends(require_admin),
+):
     from app.crawler import crawl_artist_deezer, crawl_artist_soundcloud, crawl_artist_youtube
 
     async with AsyncSessionLocal() as db:
@@ -259,14 +316,15 @@ async def recrawl_artist(artist_id: int, admin: User = Depends(require_admin)):
         snap = {"name": artist.name, "sc": artist.soundcloud_url, "yt": artist.youtube_url}
 
     async def _crawl():
-        await crawl_artist_deezer(artist_id, snap["name"])
-        if snap["sc"]:
+        if not source or source == "deezer":
+            await crawl_artist_deezer(artist_id, snap["name"])
+        if (not source or source == "soundcloud") and snap["sc"]:
             await crawl_artist_soundcloud(artist_id, snap["name"], snap["sc"])
-        if snap["yt"]:
+        if (not source or source == "youtube") and snap["yt"]:
             await crawl_artist_youtube(artist_id, snap["name"], snap["yt"])
 
     asyncio.create_task(_crawl())
-    return {"status": "started", "artist_id": artist_id}
+    return {"status": "started", "artist_id": artist_id, "source": source or "all"}
 
 
 # ── Playlists ─────────────────────────────────────────────────────────────────
@@ -381,14 +439,14 @@ async def admin_playlist_tracks(playlist_id: int, admin: User = Depends(require_
         ]
 
 
-class AddTrackBody(BaseModel):
+class AddPlaylistTrackBody(BaseModel):
     track_id: str
 
 
 @router.post("/playlists/{playlist_id}/tracks", status_code=201)
 async def add_track_to_playlist(
     playlist_id: int,
-    body: AddTrackBody,
+    body: AddPlaylistTrackBody,
     admin: User = Depends(require_admin),
 ):
     async with AsyncSessionLocal() as db:

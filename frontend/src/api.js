@@ -127,12 +127,38 @@ export async function adminAddTrackToArtist(artistId, soundcloudUrl, title = nul
   return res.json()
 }
 
-export async function adminRecrawlArtist(id) {
-  const res = await fetch(`${API_BASE}/api/admin/artists/${id}/crawl`, {
+export async function adminRecrawlArtist(id, source = null) {
+  const url = `${API_BASE}/api/admin/artists/${id}/crawl${source ? `?source=${source}` : ''}`
+  const res = await fetch(url, { method: 'POST', headers: authHeaders() })
+  if (!res.ok) throw new Error('Lỗi crawl')
+  return res.json()
+}
+
+export async function adminListArtistTracks(artistId) {
+  const res = await fetch(`${API_BASE}/api/admin/artists/${artistId}/tracks`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('Không thể tải danh sách bài hát')
+  return res.json()
+}
+
+export async function adminAddArtistTrack(artistId, { soundcloud_url, deezer_url, title } = {}) {
+  const res = await fetch(`${API_BASE}/api/admin/artists/${artistId}/tracks`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ soundcloud_url, deezer_url, title }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || 'Lỗi thêm bài hát')
+  }
+  return res.json()
+}
+
+export async function adminDeleteArtistTrack(artistId, trackId) {
+  const res = await fetch(`${API_BASE}/api/admin/artists/${artistId}/tracks/${encodeURIComponent(trackId)}`, {
+    method: 'DELETE',
     headers: authHeaders(),
   })
-  if (!res.ok) throw new Error('Lỗi crawl')
+  if (!res.ok) throw new Error('Lỗi xóa bài hát')
   return res.json()
 }
 
