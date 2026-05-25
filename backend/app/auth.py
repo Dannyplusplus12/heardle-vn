@@ -1,4 +1,5 @@
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -47,6 +48,17 @@ async def verify_google_token(id_token: str) -> dict:
             "name": data.get("name", ""),
             "picture": data.get("picture"),
         }
+
+
+def create_guest_token(name: str) -> tuple[str, str]:
+    guest_id = f"guest_{uuid.uuid4().hex[:12]}"
+    expire = datetime.now(timezone.utc) + timedelta(hours=24)
+    token = jwt.encode(
+        {"sub": guest_id, "name": name, "is_guest": True, "exp": expire},
+        _JWT_SECRET,
+        algorithm=_JWT_ALGORITHM,
+    )
+    return token, guest_id
 
 
 def is_admin_email(email: str) -> bool:

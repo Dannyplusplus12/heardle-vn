@@ -245,9 +245,8 @@ function PlaylistCard({ playlist, selected, onClick, onEdit, isAdmin }) {
 function SectionHeader({ label, action }) {
   return (
     <div className="flex items-center gap-3 mb-3 px-6">
-      <div className="w-3 h-3 bg-amber-400 shrink-0" />
-      <span className="text-[10px] font-black tracking-[0.3em] uppercase text-amber-400">{label}</span>
-      <div className="flex-1 h-px bg-white/8" />
+      <span className="text-[9px] font-black tracking-[0.35em] uppercase text-amber-400">✦ {label}</span>
+      <div className="flex-1 h-px bg-white/6" />
       {action}
     </div>
   )
@@ -547,8 +546,9 @@ export default function FanCungPage() {
               <div className="w-4 h-px bg-amber-500" />
               <span className="text-amber-500 text-[9px] font-black tracking-[0.4em] uppercase">Chế độ</span>
             </div>
-            <h1 className="text-4xl font-black uppercase tracking-tight text-white leading-none">
-              Fan <span className="text-amber-400">Cứng</span>
+            <h1 className="text-4xl font-black uppercase tracking-tight leading-none"
+              style={{ background: 'linear-gradient(135deg, #f59e0b, #FF006E)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              Fan Cứng
             </h1>
           </div>
 

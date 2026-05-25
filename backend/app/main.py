@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
 import app.models  # noqa: F401 — registers models with Base
-from app.routers import game, search, artists, auth, admin, playlists
+from app.routers import game, search, artists, auth, admin, playlists, doi_dau
 from app.seeder import seed_if_empty, reseed_all
 
 logging.basicConfig(level=logging.INFO)
@@ -69,6 +69,7 @@ app.include_router(artists.router)
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(playlists.router)
+app.include_router(doi_dau.router)
 
 
 @app.get("/api/health")

@@ -10,7 +10,8 @@ const GENRES = [
     selectedBg: 'from-pink-600 via-rose-500 to-fuchsia-700',
     border: 'border-pink-400',
     accent: 'text-pink-200',
-    shadowColor: '#f472b6',
+    shadowColor: '#FF006E',
+    accentColor: '#FF006E',
     floats: ['🌸', '💖', '🌟', '✨'],
   },
   {
@@ -22,7 +23,8 @@ const GENRES = [
     selectedBg: 'from-amber-500 via-orange-500 to-yellow-500',
     border: 'border-amber-300',
     accent: 'text-amber-100',
-    shadowColor: '#fcd34d',
+    shadowColor: '#CCFF00',
+    accentColor: '#CCFF00',
     floats: ['🔥', '⚡', '💛', '🎤'],
   },
   {
@@ -34,7 +36,8 @@ const GENRES = [
     selectedBg: 'from-cyan-500 via-blue-600 to-violet-700',
     border: 'border-cyan-400',
     accent: 'text-cyan-100',
-    shadowColor: '#22d3ee',
+    shadowColor: '#00E5FF',
+    accentColor: '#00E5FF',
     floats: ['🎸', '🎹', '🥁', '🎺'],
   },
 ]
@@ -58,14 +61,15 @@ export default function GenreScreen({ onStart }) {
 
       {/* Header */}
       <div className="mb-9 text-center relative">
-        <div className="text-6xl mb-3 leading-none">🎵</div>
-        <h1 className="text-[3.2rem] font-black uppercase tracking-tight text-white leading-none mb-2">
-          Đoán<span className="text-orange-500"> Nhạc</span>
+        <div className="text-[8px] font-black tracking-[0.5em] uppercase mb-3" style={{ color: '#FF006E' }}>✦ HEARDLE VN ✦</div>
+        <h1 className="text-[3.4rem] font-black uppercase tracking-tight leading-none mb-2"
+          style={{ background: 'linear-gradient(135deg, #f97316 0%, #FF006E 50%, #00E5FF 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          Đoán Nhạc
         </h1>
         <div className="flex items-center justify-center gap-3 mt-3">
-          <div className="h-px flex-1 bg-white/10" />
-          <p className="text-gray-400 text-[0.7rem] font-bold uppercase tracking-[0.35em]">Chọn thể loại</p>
-          <div className="h-px flex-1 bg-white/10" />
+          <div className="h-px flex-1 bg-white/8" />
+          <p className="text-[0.68rem] font-black uppercase tracking-[0.4em] text-gray-500">Chọn thể loại</p>
+          <div className="h-px flex-1 bg-white/8" />
         </div>
       </div>
 
@@ -171,10 +175,15 @@ export default function GenreScreen({ onStart }) {
         onClick={() => selected && onStart(selected)}
         disabled={!selected}
         className="w-full py-[1.05rem] font-black text-base uppercase tracking-widest border-2 transition-all duration-75
-          bg-orange-500 border-white text-white
+          border-white text-white
           hover:-translate-x-[2px] hover:-translate-y-[2px] hover:shadow-[5px_5px_0_#fff]
           active:translate-x-0 active:translate-y-0 active:shadow-none
           disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+        style={{
+          backgroundColor: selected
+            ? GENRES.find(g => g.id === selected)?.accentColor || '#f97316'
+            : '#f97316',
+        }}
       >
         Bắt đầu →
       </button>

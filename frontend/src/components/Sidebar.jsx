@@ -1,49 +1,56 @@
 import { NavLink } from 'react-router-dom'
 
 const MODES = [
-  { path: '/ngau-nhien', emoji: '🎲', label: 'Ngẫu\nnhiên', available: true },
-  { path: '/fan-cung',   emoji: '⭐', label: 'Fan\ncứng',   available: true },
-  { path: '/doi-dau',    emoji: '⚔️', label: 'Đối\nđầu',   available: false },
+  { path: '/ngau-nhien', label: 'NGẪU\nNHIÊN', icon: '🎲', color: '#f97316' },
+  { path: '/fan-cung',   label: 'FAN\nCỨNG',   icon: '⭐', color: '#f59e0b' },
+  { path: '/doi-dau',    label: 'ĐỐI\nĐẦU',    icon: '⚔',  color: '#FF006E' },
 ]
 
 export default function Sidebar() {
   return (
-    <nav className="w-[90px] min-h-screen bg-[#111] border-r-2 border-white/10 flex flex-col items-center pt-5 pb-8 gap-3 shrink-0">
-      <div className="mb-4 w-[48px] h-[48px] flex items-center justify-center border-2 border-orange-500 text-orange-500 font-black text-xl select-none">
+    <nav className="w-[88px] min-h-screen flex flex-col items-center pt-4 pb-8 gap-2 shrink-0"
+      style={{ backgroundColor: '#050505', borderRight: '2px solid rgba(255,255,255,0.06)' }}>
+
+      {/* Logo */}
+      <div className="mb-5 w-[52px] h-[52px] flex items-center justify-center font-black text-2xl select-none border-2"
+        style={{ borderColor: '#FF006E', color: '#FF006E', boxShadow: '3px 3px 0 rgba(255,0,110,0.25)' }}>
         ♪
       </div>
+
       {MODES.map(mode => (
-        mode.available ? (
-          <NavLink
-            key={mode.path}
-            to={mode.path}
-            title={mode.label.replace('\n', ' ')}
-            className={({ isActive }) => `
-              w-[72px] h-[64px] flex flex-col items-center justify-center gap-1 border-2 transition-all duration-75 no-underline
-              ${isActive
-                ? 'border-orange-500 bg-orange-500/15 text-orange-400 shadow-[4px_4px_0_rgba(249,115,22,0.5)]'
-                : 'border-white/10 text-gray-500 hover:border-white/35 hover:text-gray-300 cursor-pointer'
-              }
-            `}
-          >
-            <span className="text-2xl leading-none">{mode.emoji}</span>
-            <span className="text-[11px] font-black uppercase leading-tight whitespace-pre-line text-center tracking-wide">
-              {mode.label}
-            </span>
-          </NavLink>
-        ) : (
-          <div
-            key={mode.path}
-            title={mode.label.replace('\n', ' ')}
-            className="w-[72px] h-[64px] flex flex-col items-center justify-center gap-1 border-2 border-white/5 text-gray-700 opacity-30 cursor-not-allowed"
-          >
-            <span className="text-2xl leading-none">{mode.emoji}</span>
-            <span className="text-[11px] font-black uppercase leading-tight whitespace-pre-line text-center tracking-wide">
-              {mode.label}
-            </span>
-          </div>
-        )
+        <NavLink
+          key={mode.path}
+          to={mode.path}
+          title={mode.label.replace('\n', ' ')}
+          className="no-underline"
+        >
+          {({ isActive }) => (
+            <div
+              className="w-[68px] h-[62px] flex flex-col items-center justify-center gap-1 border-2 transition-all duration-75 cursor-pointer select-none"
+              style={{
+                borderColor: isActive ? mode.color : 'rgba(255,255,255,0.08)',
+                backgroundColor: isActive ? `${mode.color}12` : 'transparent',
+                boxShadow: isActive ? `3px 3px 0 ${mode.color}60` : 'none',
+                transform: isActive ? 'translate(-1px, -1px)' : 'none',
+              }}
+            >
+              <span className="text-xl leading-none">{mode.icon}</span>
+              <span
+                className="text-[9px] font-black uppercase leading-tight whitespace-pre-line text-center tracking-wide"
+                style={{ color: isActive ? mode.color : '#4b5563' }}>
+                {mode.label}
+              </span>
+            </div>
+          )}
+        </NavLink>
       ))}
+
+      {/* Decorative bottom */}
+      <div className="mt-auto flex flex-col items-center gap-2">
+        <div className="w-1 h-1" style={{ backgroundColor: '#FF006E' }} />
+        <div className="w-1 h-1" style={{ backgroundColor: '#00E5FF' }} />
+        <div className="w-1 h-1" style={{ backgroundColor: '#CCFF00' }} />
+      </div>
     </nav>
   )
 }

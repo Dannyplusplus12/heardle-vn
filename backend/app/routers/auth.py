@@ -76,14 +76,51 @@ async def google_login(req: GoogleLoginRequest):
     }
 
 
+class GuestLoginRequest(BaseModel):
+    name: str
+
+
+@router.post("/guest")
+async def guest_login(req: GuestLoginRequest):
+    name = req.name.strip()[:30]
+    if not name:
+        raise HTTPException(status_code=422, detail="Tên không được trống")
+    token, guest_id = auth_service.create_guest_token(name)
+    return {
+        "token": token,
+        "user": {"id": guest_id, "name": name, "is_guest": True, "email": None, "picture": None, "is_admin": False},
+    }
+
+
 @router.get("/me")
-async def me(user: User | None = Depends(get_current_user)):
-    if not user:
+async def me(creds: HTTPAuthorizationCredentials | None = Depends(_bearer)):
+    if not creds:
         raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        payload = auth_service.verify_token(creds.credentials)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+
+    if payload.get("is_guest"):
+        return {
+            "id": payload["sub"],
+            "name": payload["name"],
+            "is_guest": True,
+            "email": None,
+            "picture": None,
+            "is_admin": False,
+        }
+
+    user_id = int(payload["sub"])
+    async with AsyncSessionLocal() as db:
+        user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
     return {
         "id": user.id,
         "email": user.email,
         "name": user.name,
         "picture": user.picture,
         "is_admin": user.is_admin,
+        "is_guest": False,
     }
