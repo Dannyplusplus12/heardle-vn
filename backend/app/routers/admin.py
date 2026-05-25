@@ -64,12 +64,22 @@ async def admin_list_artists(
     needs_url: bool = False,
     admin: User = Depends(require_admin),
 ):
+    from sqlalchemy import func as sqlfunc
     async with AsyncSessionLocal() as db:
-        q = select(Artist).order_by(Artist.rank)
+        tc_sq = (
+            select(Track.artist_id, sqlfunc.count(Track.id).label("cnt"))
+            .group_by(Track.artist_id)
+            .subquery()
+        )
+        q = (
+            select(Artist, sqlfunc.coalesce(tc_sq.c.cnt, 0).label("track_count"))
+            .outerjoin(tc_sq, Artist.id == tc_sq.c.artist_id)
+            .order_by(Artist.rank)
+        )
         if needs_url:
             q = q.where(Artist.needs_manual_url.is_(True))
         result = await db.execute(q)
-        return [_artist_dict(a) for a in result.scalars().all()]
+        return [{**_artist_dict(a), "track_count": int(tc)} for a, tc in result.all()]
 
 
 @router.get("/artists/needs-url-count")

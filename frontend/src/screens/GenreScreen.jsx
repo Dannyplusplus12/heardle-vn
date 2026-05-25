@@ -149,7 +149,7 @@ export default function GenreScreen({ onStart }) {
                           : 'border-white/8 bg-transparent text-gray-700'
                         }`}
                     >
-                      & nhiều hơn…
+                      …
                     </span>
                   </div>
                 </div>
