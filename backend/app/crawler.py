@@ -88,23 +88,42 @@ async def crawl_artist_deezer(artist_db_id: int, artist_name: str) -> dict:
         return {"status": "error", "error": str(e), "track_count": 0}
 
 
+_SC_MAX_DURATION_MS = 10 * 60 * 1000
+
+
 async def crawl_artist_soundcloud(artist_db_id: int, artist_name: str, soundcloud_url: str) -> dict:
-    """Crawl track metadata from a SoundCloud artist URL via yt-dlp (no audio download)."""
+    """Crawl track metadata from a SoundCloud artist URL or playlist via yt-dlp.
+
+    - Profile URLs (soundcloud.com/artist): appends /tracks to fetch only own uploads,
+      skipping reposts.
+    - Playlist URLs (soundcloud.com/artist/sets/name): crawled as-is.
+    """
     from app.database import AsyncSessionLocal
     from app.models import Track
 
+    url = soundcloud_url.rstrip("/")
+    is_playlist = "/sets/" in url
+    if not is_playlist and not url.endswith("/tracks"):
+        url = url + "/tracks"
+
+    cmd = [
+        "yt-dlp",
+        "--flat-playlist",
+        "--dump-json",
+        "--no-download",
+        url,
+    ]
+    # For artist track pages keep a ceiling; playlists are crawled fully.
+    if not is_playlist:
+        cmd += ["--playlist-end", "300"]
+
     try:
         proc = await asyncio.create_subprocess_exec(
-            "yt-dlp",
-            "--flat-playlist",
-            "--dump-json",
-            "--no-download",
-            "--playlist-end", "100",
-            soundcloud_url,
+            *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
         )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=60)
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=120)
         lines = [ln.strip() for ln in stdout.decode().splitlines() if ln.strip()]
 
         saved = 0
@@ -114,6 +133,9 @@ async def crawl_artist_soundcloud(artist_db_id: int, artist_name: str, soundclou
                     entry = json.loads(line)
                     sc_id = str(entry.get("id", ""))
                     if not sc_id:
+                        continue
+                    duration_ms = int((entry.get("duration") or 0) * 1000)
+                    if duration_ms > _SC_MAX_DURATION_MS:
                         continue
                     track_id = f"soundcloud:{sc_id}"
                     existing = await db.get(Track, track_id)
@@ -127,14 +149,15 @@ async def crawl_artist_soundcloud(artist_db_id: int, artist_name: str, soundclou
                             source_id=sc_id,
                             cover_url=entry.get("thumbnail"),
                             permalink_url=entry.get("webpage_url", soundcloud_url),
-                            duration_ms=int((entry.get("duration") or 0) * 1000),
+                            duration_ms=duration_ms,
                         ))
                         saved += 1
                 except Exception:
                     continue
             await db.commit()
 
-        log.info("[crawler] %s: saved %d tracks from SoundCloud", artist_name, saved)
+        kind = "playlist" if is_playlist else "tracks"
+        log.info("[crawler] %s: saved %d tracks from SoundCloud (%s)", artist_name, saved, kind)
         return {"status": "ok", "track_count": saved}
 
     except asyncio.TimeoutError:
