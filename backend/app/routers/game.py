@@ -16,6 +16,43 @@ router = APIRouter(prefix="/api/game", tags=["game"])
 CLIP_SECONDS = 30
 
 
+async def _random_from_genre(genre: str | None) -> dict | None:
+    """Pick a random track from DB, optionally filtered by artist.genre column."""
+    from app.database import AsyncSessionLocal
+    from app.models import Track, Artist
+    from sqlalchemy import select, or_
+    from sqlalchemy import func as sqlfunc
+
+    async with AsyncSessionLocal() as db:
+        if genre and genre != "all":
+            q = select(Track).join(Artist, Track.artist_id == Artist.id)
+            if genre == "pop":
+                q = q.where(sqlfunc.lower(Artist.genre).contains("pop"))
+            elif genre == "hiphop":
+                q = q.where(
+                    or_(
+                        sqlfunc.lower(Artist.genre).contains("hip"),
+                        sqlfunc.lower(Artist.genre).contains("rap"),
+                    )
+                )
+        else:
+            q = select(Track)
+
+        q = q.order_by(sqlfunc.random()).limit(1)
+        track = (await db.execute(q)).scalar_one_or_none()
+
+    if not track:
+        return None
+
+    return {
+        "id": track.id,
+        "title": track.title,
+        "artist": track.artist_name,
+        "cover_url": track.cover_url or "",
+        "permalink_url": track.permalink_url or "",
+    }
+
+
 async def _random_from_pool(artist_ids: list[int], playlist_ids: list[int]) -> dict:
     from app.database import AsyncSessionLocal
     from app.models import Track, PlaylistTrack
@@ -76,7 +113,11 @@ async def new_game(
             artist_list = [a.strip() for a in artists.split(",") if a.strip()]
             return await get_random_track_by_artists(artist_list)
 
-        return await get_random_vietnamese_track(genre)
+        db_result = await _random_from_genre(genre)
+        if db_result:
+            return db_result
+        # Fallback: Deezer curated list (treat 'all' same as no genre)
+        return await get_random_vietnamese_track(None if genre == "all" else genre)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 

@@ -9,7 +9,7 @@ import ResultBanner from '../components/ResultBanner'
 import CoverArt from '../components/CoverArt'
 
 const GENRE_LABELS = {
-  pop: 'POP', indie: 'INDIE', hiphop: 'HIP-HOP & RAP', rock: 'ROCK',
+  pop: 'POP', hiphop: 'HIP-HOP & RAP', all: 'TẤT CẢ',
 }
 
 export default function GameScreen({
