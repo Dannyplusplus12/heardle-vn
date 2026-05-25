@@ -16,29 +16,51 @@ router = APIRouter(prefix="/api/game", tags=["game"])
 CLIP_SECONDS = 30
 
 
-async def _random_from_genre(genre: str | None) -> dict | None:
-    """Pick a random track from DB, optionally filtered by artist.genre column."""
+async def _random_from_genre(genre: str | None, difficulty: str | None = None) -> dict | None:
+    """Pick a random track from DB filtered by genre and rank-based difficulty tier."""
     from app.database import AsyncSessionLocal
     from app.models import Track, Artist
     from sqlalchemy import select, or_
     from sqlalchemy import func as sqlfunc
 
     async with AsyncSessionLocal() as db:
+        # Build artist filter for genre
+        artist_q = select(Artist.id)
         if genre and genre != "all":
-            q = select(Track).join(Artist, Track.artist_id == Artist.id)
             if genre == "pop":
-                q = q.where(sqlfunc.lower(Artist.genre).contains("pop"))
+                artist_q = artist_q.where(sqlfunc.lower(Artist.genre).contains("pop"))
             elif genre == "hiphop":
-                q = q.where(
+                artist_q = artist_q.where(
                     or_(
                         sqlfunc.lower(Artist.genre).contains("hip"),
                         sqlfunc.lower(Artist.genre).contains("rap"),
                     )
                 )
-        else:
-            q = select(Track)
+        artist_q = artist_q.order_by(Artist.rank)
+        all_artist_ids = [r[0] for r in (await db.execute(artist_q)).all()]
 
-        q = q.order_by(sqlfunc.random()).limit(1)
+        # Slice by difficulty tier (genre-relative ranking)
+        if difficulty == "easy":
+            artist_ids = all_artist_ids[:10]
+        elif difficulty == "medium":
+            artist_ids = all_artist_ids[10:50]
+        elif difficulty == "hard":
+            artist_ids = all_artist_ids[50:]
+        else:
+            artist_ids = all_artist_ids
+
+        # Fall back to full genre pool if tier is empty
+        if not artist_ids:
+            artist_ids = all_artist_ids
+        if not artist_ids:
+            return None
+
+        q = (
+            select(Track)
+            .where(Track.artist_id.in_(artist_ids))
+            .order_by(sqlfunc.random())
+            .limit(1)
+        )
         track = (await db.execute(q)).scalar_one_or_none()
 
     if not track:
@@ -99,6 +121,7 @@ async def _random_from_pool(artist_ids: list[int], playlist_ids: list[int]) -> d
 @router.get("/new")
 async def new_game(
     genre: Optional[str] = Query(default=None),
+    difficulty: Optional[str] = Query(default=None),   # 'easy' | 'medium' | 'hard'
     artists: Optional[str] = Query(default=None),       # legacy: comma-sep names
     artist_ids: Optional[str] = Query(default=None),    # pool-aware: comma-sep DB IDs
     playlist_ids: Optional[str] = Query(default=None),  # pool-aware: comma-sep playlist IDs
@@ -113,7 +136,7 @@ async def new_game(
             artist_list = [a.strip() for a in artists.split(",") if a.strip()]
             return await get_random_track_by_artists(artist_list)
 
-        db_result = await _random_from_genre(genre)
+        db_result = await _random_from_genre(genre, difficulty)
         if db_result:
             return db_result
         # Fallback: Deezer curated list (treat 'all' same as no genre)

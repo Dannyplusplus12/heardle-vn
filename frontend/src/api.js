@@ -7,9 +7,10 @@ function authHeaders() {
 
 // ── Game ──────────────────────────────────────────────────────────────────────
 
-export async function fetchNewGame({ genre, artists, artistIds, playlistIds } = {}) {
+export async function fetchNewGame({ genre, difficulty, artists, artistIds, playlistIds } = {}) {
   const params = new URLSearchParams()
   if (genre) params.set('genre', genre)
+  if (difficulty) params.set('difficulty', difficulty)
   if (artists?.length) params.set('artists', artists.join(','))
   if (artistIds?.length) params.set('artist_ids', artistIds.join(','))
   if (playlistIds?.length) params.set('playlist_ids', playlistIds.join(','))

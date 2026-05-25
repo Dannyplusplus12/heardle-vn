@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 
 const TOTAL = 30
 
-export default function AudioPlayer({ src, limit }) {
+export default function AudioPlayer({ src, limit, phaseColor = '#f97316' }) {
   const audioRef = useRef(null)
   const barRef = useRef(null)
   const [playing, setPlaying] = useState(false)
@@ -98,20 +98,18 @@ export default function AudioPlayer({ src, limit }) {
         <button
           onClick={toggle}
           disabled={!loaded}
-          className={`
-            w-20 h-20 border-2 flex items-center justify-center text-3xl font-black
-            transition-all duration-75 select-none
-            ${!loaded
-              ? 'border-white/15 bg-white/5 cursor-not-allowed text-gray-600'
+          className="w-20 h-20 border-2 flex items-center justify-center text-3xl font-black transition-all duration-75 select-none"
+          style={
+            !loaded
+              ? { borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.05)', color: '#4b5563', cursor: 'not-allowed' }
               : playing
-                ? 'border-orange-500 bg-orange-500 text-white shadow-[3px_3px_0_rgba(249,115,22,0.5)] -translate-x-[1px] -translate-y-[1px]'
-                : 'border-white bg-[#1a1a1a] text-white hover:-translate-x-[2px] hover:-translate-y-[2px] hover:shadow-[4px_4px_0_#fff] active:translate-x-0 active:translate-y-0 cursor-pointer'
-            }
-          `}
+                ? { borderColor: phaseColor, backgroundColor: phaseColor, color: '#fff', boxShadow: `3px 3px 0 ${phaseColor}55`, transform: 'translate(-1px,-1px)', cursor: 'pointer' }
+                : { borderColor: '#fff', backgroundColor: '#1a1a1a', color: '#fff', cursor: 'pointer' }
+          }
           aria-label={!loaded ? 'Đang tải' : playing ? 'Dừng' : 'Phát'}
         >
           {!loaded
-            ? <div className="w-6 h-6 border-2 border-white/30 border-t-white/80 animate-spin" />
+            ? <div className="w-6 h-6 border-2 border-t-transparent animate-spin" style={{ borderColor: phaseColor, borderTopColor: 'transparent' }} />
             : playing ? '⏸' : '▶'
           }
         </button>
@@ -126,13 +124,17 @@ export default function AudioPlayer({ src, limit }) {
       >
         {/* Available range */}
         <div
-          className="absolute inset-y-0 left-0 bg-orange-500/15 border-r-2 border-orange-500/50"
-          style={{ width: `${availablePct}%` }}
+          className="absolute inset-y-0 left-0 border-r-2"
+          style={{
+            width: `${availablePct}%`,
+            backgroundColor: `${phaseColor}18`,
+            borderRightColor: `${phaseColor}60`,
+          }}
         />
         {/* Played */}
         <div
-          className="absolute inset-y-0 left-0 bg-orange-500"
-          style={{ width: `${playedPct}%` }}
+          className="absolute inset-y-0 left-0"
+          style={{ width: `${playedPct}%`, backgroundColor: phaseColor }}
         />
         {/* Playhead */}
         {loaded && (
@@ -145,11 +147,11 @@ export default function AudioPlayer({ src, limit }) {
 
       {/* Time labels */}
       <div className="flex justify-between mt-1">
-        <span className="text-[10px] font-black uppercase text-orange-500 tracking-wider">
+        <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: loaded ? phaseColor : '#374151' }}>
           {loaded ? fmt(currentTime) : '—'}
         </span>
         <span className="text-[10px] font-black uppercase text-gray-600 tracking-wider">
-          {!loaded ? 'Loading...' : limit === null ? 'Full song' : `${fmt(maxTime)} / 30s`}
+          {!loaded ? 'Loading...' : limit === null ? 'Full song' : fmt(maxTime)}
         </span>
       </div>
     </div>

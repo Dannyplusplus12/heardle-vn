@@ -1,4 +1,4 @@
-export default function ResultBanner({ status, track, onPlayAgain }) {
+export default function ResultBanner({ status, track, isLastPhase = true, onPlayAgain }) {
   if (status !== 'won' && status !== 'lost') return null
   const won = status === 'won'
 
@@ -27,7 +27,7 @@ export default function ResultBanner({ status, track, onPlayAgain }) {
           hover:-translate-x-[2px] hover:-translate-y-[2px] hover:shadow-[4px_4px_0_#fff]
           active:translate-x-0 active:translate-y-0 active:shadow-none transition-all duration-75"
       >
-        Chơi lại →
+        {isLastPhase ? 'Chơi lại →' : 'Tiếp theo →'}
       </button>
     </div>
   )

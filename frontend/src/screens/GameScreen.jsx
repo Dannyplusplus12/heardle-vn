@@ -2,34 +2,50 @@ import { useEffect, useRef, useState } from 'react'
 import { useGame } from '../hooks/useGame'
 import { getClipUrl } from '../api'
 import AudioPlayer from '../components/AudioPlayer'
-import ClipStageBar from '../components/ClipStageBar'
 import GuessInput from '../components/GuessInput'
 import ActionBar from '../components/ActionBar'
 import ResultBanner from '../components/ResultBanner'
 import CoverArt from '../components/CoverArt'
+import WrongPopup from '../components/WrongPopup'
+
+const PHASE_COLORS = {
+  easy:   { main: '#22c55e', dim: 'rgba(34,197,94,0.35)',   labelCls: 'text-green-400',  borderCls: 'border-green-500/40' },
+  medium: { main: '#eab308', dim: 'rgba(234,179,8,0.35)',   labelCls: 'text-yellow-400', borderCls: 'border-yellow-400/40' },
+  hard:   { main: '#ef4444', dim: 'rgba(239,68,68,0.35)',   labelCls: 'text-red-400',    borderCls: 'border-red-500/40' },
+}
 
 const GENRE_LABELS = {
   pop: 'POP', hiphop: 'HIP-HOP & RAP', all: 'TẤT CẢ',
 }
 
+const ALL_PHASES = ['easy', 'medium', 'hard']
+
 export default function GameScreen({
   genre,
+  phase = 'easy',
+  phaseIndex = 0,
+  isLastPhase = true,
   artists = [],
   artistIds = [],
   playlistIds = [],
   onBack,
+  onPhaseComplete,
 }) {
   const { track, stage, stageIndex, attempts, status, startNewGame, skip, guess, giveUp } = useGame()
   const gameOver = status === 'won' || status === 'lost'
-  const [shake, setShake] = useState(false)
+  const [wrongPopup, setWrongPopup] = useState(null)
   const prevLen = useRef(0)
 
   const isFanMode = artistIds.length > 0 || playlistIds.length > 0 || artists.length > 0
+  const pc = PHASE_COLORS[phase] || PHASE_COLORS.easy
+
   const gameOptions = (artistIds.length > 0 || playlistIds.length > 0)
     ? { artistIds, playlistIds }
     : isFanMode
       ? { artists }
-      : { genre }
+      : { genre, difficulty: phase }
+
+  const handleResult = onPhaseComplete ?? (() => startNewGame(gameOptions))
 
   useEffect(() => { startNewGame(gameOptions) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -37,8 +53,7 @@ export default function GameScreen({
     if (attempts.length > prevLen.current) {
       const last = attempts[attempts.length - 1]
       if (last?.type === 'wrong') {
-        setShake(true)
-        setTimeout(() => setShake(false), 400)
+        setWrongPopup(last.value)
       }
       prevLen.current = attempts.length
     }
@@ -46,22 +61,52 @@ export default function GameScreen({
 
   return (
     <div className="w-full max-w-xs">
-      <header className="flex items-center justify-between mb-6">
+
+      {wrongPopup !== null && (
+        <WrongPopup
+          wrongTrack={wrongPopup}
+          phase={phase}
+          onDismiss={() => setWrongPopup(null)}
+        />
+      )}
+
+      <header className="flex items-center justify-between mb-5">
         <button
           onClick={onBack}
           className="text-xs font-bold uppercase tracking-wider text-gray-600 hover:text-gray-300 transition-colors"
         >
           ← {isFanMode ? 'Đổi nguồn' : 'Đổi thể loại'}
         </button>
-        <span className="text-xs font-black uppercase tracking-widest px-3 py-1 border-2 border-orange-500/50 text-orange-400">
+        <span className={`text-xs font-black uppercase tracking-widest px-3 py-1 border-2 ${pc.borderCls} ${pc.labelCls}`}>
           {isFanMode ? '⭐ FAN CỨNG' : (GENRE_LABELS[genre] || 'NGẪU NHIÊN')}
         </span>
         <div className="w-20" />
       </header>
 
+      {/* Phase strip — 3 colored segments, only in genre mode */}
+      {!isFanMode && (
+        <div className="flex gap-1 mb-5">
+          {ALL_PHASES.map((p, i) => (
+            <div
+              key={p}
+              className="h-[3px] flex-1 transition-all duration-500"
+              style={{
+                backgroundColor: i <= phaseIndex
+                  ? PHASE_COLORS[p].main
+                  : 'rgba(255,255,255,0.07)',
+                opacity: i === phaseIndex ? 1 : i < phaseIndex ? 0.55 : 1,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       {status === 'loading' && (
         <div className="text-center py-16">
-          <div className="w-10 h-10 border-2 border-orange-500 border-t-transparent animate-spin mx-auto mb-4" />
+          <div
+            className="w-10 h-10 border-2 border-t-transparent animate-spin mx-auto mb-4"
+            style={{ borderColor: pc.main, borderTopColor: 'transparent' }}
+          />
           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Đang tải...</p>
         </div>
       )}
@@ -81,9 +126,7 @@ export default function GameScreen({
 
       {(status === 'playing' || gameOver) && track && (
         <>
-          <div className={shake ? 'shake' : ''}>
-            <CoverArt src={track.cover_url} revealed={gameOver} />
-          </div>
+          <CoverArt src={track.cover_url} revealed={gameOver} />
 
           {gameOver && (
             <div className="text-center mb-5 -mt-2">
@@ -99,27 +142,25 @@ export default function GameScreen({
             </div>
           )}
 
-          <ClipStageBar stageIndex={stageIndex} />
-
           <AudioPlayer
             src={getClipUrl(track.id, gameOver)}
             limit={gameOver ? null : stage}
+            phaseColor={isFanMode ? '#f97316' : pc.main}
           />
 
-          {attempts.length > 0 && (
-            <div className="flex flex-col gap-1.5 mb-3">
+          {/* Attempt dots — visual only */}
+          {attempts.length > 0 && !gameOver && (
+            <div className="flex gap-1.5 mb-4">
               {attempts.map((a, i) => (
                 <div
                   key={i}
-                  className={`flex items-center gap-2 px-3 py-2 border-2 text-xs font-bold uppercase tracking-wide
-                    ${a.type === 'wrong'
-                      ? 'border-red-500/60 bg-red-500/10 text-red-400'
-                      : 'border-white/10 bg-white/3 text-gray-600'
-                    }`}
-                >
-                  <span>{a.type === 'wrong' ? '✗' : '→'}</span>
-                  <span className="truncate">{a.value || 'Bỏ qua'}</span>
-                </div>
+                  className="w-3 h-3 border-2 transition-all duration-200"
+                  style={
+                    a.type === 'wrong'
+                      ? { backgroundColor: pc.main, borderColor: pc.main }
+                      : { backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,0.18)' }
+                  }
+                />
               ))}
             </div>
           )}
@@ -136,7 +177,12 @@ export default function GameScreen({
             </>
           )}
 
-          <ResultBanner status={status} track={track} onPlayAgain={() => startNewGame(gameOptions)} />
+          <ResultBanner
+            status={status}
+            track={track}
+            isLastPhase={isLastPhase}
+            onPlayAgain={handleResult}
+          />
         </>
       )}
     </div>

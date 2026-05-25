@@ -18,7 +18,7 @@ const GENRES = [
     label: 'HIP-HOP & RAP',
     sublabel: 'Rap Việt',
     emoji: '🎧',
-    artists: ['HIEUTHUHAI', 'tlinh', 'Đen Vâu', 'Binz', 'Obito'],
+    artists: ['HIEUTHUHAI', 'tlinh', 'Đen Vâu', 'MCK', 'lowG'],
     selectedBg: 'from-amber-500 via-orange-500 to-yellow-500',
     border: 'border-amber-300',
     accent: 'text-amber-100',
@@ -60,7 +60,7 @@ export default function GenreScreen({ onStart }) {
       <div className="mb-9 text-center relative">
         <div className="text-6xl mb-3 leading-none">🎵</div>
         <h1 className="text-[3.2rem] font-black uppercase tracking-tight text-white leading-none mb-2">
-          Heardle<span className="text-orange-500"> VN</span>
+          Đoán<span className="text-orange-500"> Nhạc</span>
         </h1>
         <div className="flex items-center justify-center gap-3 mt-3">
           <div className="h-px flex-1 bg-white/10" />
@@ -142,6 +142,15 @@ export default function GenreScreen({ onStart }) {
                         {a}
                       </span>
                     ))}
+                    <span
+                      className={`text-[0.63rem] font-bold px-2 py-0.5 border italic
+                        ${isSelected
+                          ? 'border-white/20 bg-black/10 text-white/40'
+                          : 'border-white/8 bg-transparent text-gray-700'
+                        }`}
+                    >
+                      & nhiều hơn…
+                    </span>
                   </div>
                 </div>
 
