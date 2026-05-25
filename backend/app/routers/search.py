@@ -23,6 +23,20 @@ async def _search_by_names(q: str, artists: list[str], limit: int) -> list[dict]
     return [{"id": r.id, "title": r.title, "artist": r.artist_name} for r in rows]
 
 
+async def _search_db_all(q: str, limit: int = 10) -> list[dict]:
+    """Search all DB tracks by title — used by ngẫu-nhiên mode (no pool filter)."""
+    from app.database import AsyncSessionLocal
+    from app.models import Track
+    async with AsyncSessionLocal() as db:
+        query = (
+            select(Track)
+            .where(Track.title.ilike(f"%{q}%"))
+            .limit(limit)
+        )
+        rows = (await db.execute(query)).scalars().all()
+    return [{"id": r.id, "title": r.title, "artist": r.artist_name} for r in rows]
+
+
 async def _search_pool(
     q: str,
     artist_ids: list[int],
@@ -81,6 +95,10 @@ async def search(
                 return cached
             return await search_tracks_by_artists(q, artist_list, limit=10)
 
+        # No filter: search DB first (ngẫu-nhiên tracks live here), fall back to Deezer
+        db_results = await _search_db_all(q, limit=10)
+        if db_results:
+            return db_results
         return await search_tracks(q, limit=10)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
