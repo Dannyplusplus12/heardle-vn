@@ -35,6 +35,7 @@ async def lifespan(app: FastAPI):
                 "ALTER TABLE artists ADD COLUMN IF NOT EXISTS needs_manual_url boolean NOT NULL DEFAULT false",
                 "ALTER TABLE artists ADD COLUMN IF NOT EXISTS visible boolean NOT NULL DEFAULT true",
                 "ALTER TABLE artists ADD COLUMN IF NOT EXISTS in_random boolean NOT NULL DEFAULT true",
+                "ALTER TABLE artists ADD COLUMN IF NOT EXISTS zing_url text",
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS username varchar(50)",
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash varchar(200)",
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio text",
@@ -80,6 +81,48 @@ app.include_router(doi_dau.router)
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/api/admin/seed-zing-chart")
+async def admin_seed_zing_chart(
+    secret: str = Query(...),
+    limit: int = Query(default=100, ge=10, le=200),
+):
+    """Seed tracks from Zing VP-Pop chart into DB. Runs in background."""
+    if secret != _ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    async def _run():
+        from app.zing import get_chart_tracks
+        from app.database import AsyncSessionLocal
+        from app.models import Track
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+        tracks = await get_chart_tracks(limit=limit)
+        if not tracks:
+            return
+        async with AsyncSessionLocal() as db:
+            stmt = pg_insert(Track).values([
+                {
+                    "id": f"zing:{t['source_id']}",
+                    "title": t["title"][:300],
+                    "artist_name": t["artist"],
+                    "artist_id": None,
+                    "source": "zing",
+                    "source_id": t["source_id"],
+                    "cover_url": t.get("cover_url"),
+                    "permalink_url": t.get("permalink_url"),
+                    "duration_ms": t.get("duration_ms"),
+                }
+                for t in tracks
+            ]).on_conflict_do_nothing(index_elements=["id"])
+            await db.execute(stmt)
+            await db.commit()
+        import logging
+        logging.getLogger(__name__).info("[zing-chart] seeded %d tracks", len(tracks))
+
+    asyncio.create_task(_run())
+    return {"status": "started", "limit": limit}
 
 
 @app.get("/api/admin/reseed")

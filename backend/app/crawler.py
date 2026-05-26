@@ -167,6 +167,48 @@ async def crawl_artist_soundcloud(artist_db_id: int, artist_name: str, soundclou
         return {"status": "error", "error": str(e), "track_count": 0}
 
 
+async def crawl_artist_zing(artist_db_id: int, artist_name: str, zing_url: str) -> dict:
+    """Crawl track metadata from a Zing MP3 artist/playlist URL via yt-dlp."""
+    from app.database import AsyncSessionLocal
+    from app.models import Track
+    from app.zing import crawl_artist_tracks
+
+    try:
+        entries = await crawl_artist_tracks(zing_url, limit=300)
+        if not entries:
+            return {"status": "no_tracks", "track_count": 0}
+
+        saved = 0
+        async with AsyncSessionLocal() as db:
+            for entry in entries:
+                zing_id = entry.get("source_id", "")
+                if not zing_id:
+                    continue
+                track_id = f"zing:{zing_id}"
+                existing = await db.get(Track, track_id)
+                if not existing:
+                    db.add(Track(
+                        id=track_id,
+                        title=entry["title"],
+                        artist_name=artist_name,
+                        artist_id=artist_db_id,
+                        source="zing",
+                        source_id=zing_id,
+                        cover_url=entry.get("cover_url"),
+                        permalink_url=entry.get("permalink_url"),
+                        duration_ms=entry.get("duration_ms"),
+                    ))
+                    saved += 1
+            await db.commit()
+
+        log.info("[crawler] %s: saved %d new Zing tracks", artist_name, saved)
+        return {"status": "ok", "track_count": saved}
+
+    except Exception as e:
+        log.error("[crawler] Zing crawl failed for %s: %s", artist_name, e)
+        return {"status": "error", "error": str(e), "track_count": 0}
+
+
 async def crawl_artist_youtube(artist_db_id: int, artist_name: str, youtube_url: str) -> dict:
     """Crawl track metadata from a YouTube channel URL via yt-dlp (no audio download)."""
     from app.database import AsyncSessionLocal

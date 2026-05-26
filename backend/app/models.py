@@ -32,6 +32,7 @@ class Artist(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     soundcloud_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     youtube_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    zing_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     needs_manual_url: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     playable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

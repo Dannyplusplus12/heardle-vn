@@ -5,11 +5,12 @@ import {
   adminAddArtistTrack, adminUpdateArtistTrack, adminDeleteArtistTrack,
 } from '../../api'
 
-const SOURCE_LABEL = { deezer: 'DZ', soundcloud: 'SC', youtube: 'YT' }
+const SOURCE_LABEL = { deezer: 'DZ', soundcloud: 'SC', youtube: 'YT', zing: 'ZG' }
 const SOURCE_COLOR = {
   deezer:     { bg: '#1db954', text: '#000' },
   soundcloud: { bg: '#ff5500', text: '#fff' },
   youtube:    { bg: '#ff0000', text: '#fff' },
+  zing:       { bg: '#8b5cf6', text: '#fff' },
 }
 
 function SourceBadge({ source }) {
@@ -79,6 +80,7 @@ export default function ArtistModal({ artist, onClose, onSaved }) {
     genre: artist?.genre ?? '',
     soundcloud_url: artist?.soundcloud_url ?? '',
     youtube_url: artist?.youtube_url ?? '',
+    zing_url: artist?.zing_url ?? '',
     visible: artist?.visible ?? true,
     in_random: artist?.in_random ?? true,
   })
@@ -140,7 +142,8 @@ export default function ArtistModal({ artist, onClose, onSaved }) {
     setCrawling(source); setCrawlMsg('')
     try {
       await adminRecrawlArtist(artist.id, source)
-      const name = source === 'deezer' ? 'Deezer' : source === 'soundcloud' ? 'SoundCloud' : 'YouTube'
+      const names = { deezer: 'Deezer', soundcloud: 'SoundCloud', youtube: 'YouTube', zing: 'Zing MP3' }
+      const name = names[source] || source
       setCrawlMsg(`↻ ${name} đang crawl — reload sau vài phút`)
       setTimeout(() => { setCrawlMsg(''); loadTracks() }, 5000)
     } catch (e) { setCrawlMsg(`Lỗi: ${e.message}`) }
@@ -232,6 +235,15 @@ export default function ArtistModal({ artist, onClose, onSaved }) {
                     crawlDisabled={!form.youtube_url}
                     placeholder="https://youtube.com/@artist"
                   />
+                  <UrlCrawlRow
+                    label="Zing MP3 URL"
+                    value={form.zing_url}
+                    onChange={v => setForm(f => ({ ...f, zing_url: v }))}
+                    onCrawl={() => handleCrawl('zing')}
+                    crawling={crawling === 'zing'}
+                    crawlDisabled={!form.zing_url}
+                    placeholder="https://zingmp3.vn/nghe-si/son-tung-m-tp"
+                  />
                   {crawlMsg && (
                     <p className="text-[9px] text-amber-400 font-bold">{crawlMsg}</p>
                   )}
@@ -242,6 +254,7 @@ export default function ArtistModal({ artist, onClose, onSaved }) {
                   <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">Nguồn crawl</p>
                   <Field label="SoundCloud URL" value={form.soundcloud_url} onChange={set('soundcloud_url')} placeholder="https://soundcloud.com/artist" />
                   <Field label="YouTube URL" value={form.youtube_url} onChange={set('youtube_url')} placeholder="https://youtube.com/@artist" />
+                  <Field label="Zing MP3 URL" value={form.zing_url} onChange={set('zing_url')} placeholder="https://zingmp3.vn/nghe-si/son-tung-m-tp" />
                 </div>
               )}
 

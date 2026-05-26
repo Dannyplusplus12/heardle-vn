@@ -26,6 +26,7 @@ class ArtistCreate(BaseModel):
     genre: str | None = None
     soundcloud_url: str | None = None
     youtube_url: str | None = None
+    zing_url: str | None = None
 
 
 class ArtistUpdate(BaseModel):
@@ -35,6 +36,7 @@ class ArtistUpdate(BaseModel):
     genre: str | None = None
     soundcloud_url: str | None = None
     youtube_url: str | None = None
+    zing_url: str | None = None
     playable: bool | None = None
     needs_manual_url: bool | None = None
     visible: bool | None = None
@@ -52,6 +54,7 @@ def _artist_dict(a: Artist) -> dict:
         "description": a.description,
         "soundcloud_url": a.soundcloud_url,
         "youtube_url": a.youtube_url,
+        "zing_url": getattr(a, "zing_url", None),
         "needs_manual_url": a.needs_manual_url,
         "playable": a.playable,
         "visible": getattr(a, "visible", True),
@@ -115,6 +118,7 @@ async def create_artist(body: ArtistCreate, admin: User = Depends(require_admin)
             description=body.description,
             soundcloud_url=body.soundcloud_url,
             youtube_url=body.youtube_url,
+            zing_url=body.zing_url,
         )
         db.add(artist)
         await db.commit()
@@ -123,6 +127,7 @@ async def create_artist(body: ArtistCreate, admin: User = Depends(require_admin)
 
     sc_url = body.soundcloud_url
     yt_url = body.youtube_url
+    zing_url = body.zing_url
     artist_name = body.name
 
     async def _crawl():
@@ -137,6 +142,9 @@ async def create_artist(body: ArtistCreate, admin: User = Depends(require_admin)
                 await crawl_artist_soundcloud(artist_id, artist_name, sc_url)
             if yt_url:
                 await crawl_artist_youtube(artist_id, artist_name, yt_url)
+        if zing_url:
+            from app.crawler import crawl_artist_zing
+            await crawl_artist_zing(artist_id, artist_name, zing_url)
 
     asyncio.create_task(_crawl())
 
@@ -151,7 +159,7 @@ async def update_artist(
     body: ArtistUpdate,
     admin: User = Depends(require_admin),
 ):
-    from app.crawler import crawl_artist_soundcloud, crawl_artist_youtube
+    from app.crawler import crawl_artist_soundcloud, crawl_artist_youtube, crawl_artist_zing
 
     async with AsyncSessionLocal() as db:
         artist = await db.get(Artist, artist_id)
@@ -160,6 +168,7 @@ async def update_artist(
 
         old_sc = artist.soundcloud_url
         old_yt = artist.youtube_url
+        old_zing = getattr(artist, "zing_url", None)
 
         if body.name is not None:
             artist.name = body.name
@@ -173,6 +182,8 @@ async def update_artist(
             artist.soundcloud_url = body.soundcloud_url
         if body.youtube_url is not None:
             artist.youtube_url = body.youtube_url
+        if body.zing_url is not None:
+            artist.zing_url = body.zing_url
         if body.playable is not None:
             artist.playable = body.playable
         if body.needs_manual_url is not None:
@@ -188,6 +199,7 @@ async def update_artist(
 
     new_sc = body.soundcloud_url
     new_yt = body.youtube_url
+    new_zing = body.zing_url
     artist_name = snap["name"]
 
     async def _recrawl():
@@ -195,6 +207,8 @@ async def update_artist(
             await crawl_artist_soundcloud(artist_id, artist_name, new_sc)
         if new_yt and new_yt != old_yt:
             await crawl_artist_youtube(artist_id, artist_name, new_yt)
+        if new_zing and new_zing != old_zing:
+            await crawl_artist_zing(artist_id, artist_name, new_zing)
 
     asyncio.create_task(_recrawl())
     return snap
@@ -356,13 +370,18 @@ async def recrawl_artist(
     source: str | None = None,  # 'deezer' | 'soundcloud' | 'youtube' | None (all)
     admin: User = Depends(require_admin),
 ):
-    from app.crawler import crawl_artist_deezer, crawl_artist_soundcloud, crawl_artist_youtube
+    from app.crawler import crawl_artist_deezer, crawl_artist_soundcloud, crawl_artist_youtube, crawl_artist_zing
 
     async with AsyncSessionLocal() as db:
         artist = await db.get(Artist, artist_id)
         if not artist:
             raise HTTPException(status_code=404, detail="Artist not found")
-        snap = {"name": artist.name, "sc": artist.soundcloud_url, "yt": artist.youtube_url}
+        snap = {
+            "name": artist.name,
+            "sc": artist.soundcloud_url,
+            "yt": artist.youtube_url,
+            "zing": getattr(artist, "zing_url", None),
+        }
 
     async def _crawl():
         if not source or source == "deezer":
@@ -371,6 +390,8 @@ async def recrawl_artist(
             await crawl_artist_soundcloud(artist_id, snap["name"], snap["sc"])
         if (not source or source == "youtube") and snap["yt"]:
             await crawl_artist_youtube(artist_id, snap["name"], snap["yt"])
+        if (not source or source == "zing") and snap["zing"]:
+            await crawl_artist_zing(artist_id, snap["name"], snap["zing"])
 
     asyncio.create_task(_crawl())
     return {"status": "started", "artist_id": artist_id, "source": source or "all"}

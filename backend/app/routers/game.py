@@ -9,7 +9,7 @@ from app.deezer import (
     get_random_track_by_artists,
     get_preview_url,
 )
-from app import soundcloud, youtube
+from app import soundcloud, youtube, zing
 
 router = APIRouter(prefix="/api/game", tags=["game"])
 
@@ -207,6 +207,8 @@ async def get_clip(track_id: str, full: bool = Query(default=False)):
             stream_url = await soundcloud.get_stream_url(source_id)
         elif source == "youtube":
             stream_url = await youtube.get_stream_url(source_id)
+        elif source == "zing":
+            stream_url = await zing.get_stream_url(source_id)
         else:
             raise HTTPException(status_code=400, detail=f"Unknown source: {source}")
 
