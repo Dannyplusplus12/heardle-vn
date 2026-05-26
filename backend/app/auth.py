@@ -2,9 +2,9 @@ import os
 import uuid
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 import httpx
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 _JWT_SECRET = os.getenv("JWT_SECRET", "heardle-vn-jwt-secret-change-in-production")
 _JWT_ALGORITHM = "HS256"
@@ -15,15 +15,13 @@ _ADMIN_EMAILS = {
     if e.strip()
 }
 
-_pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def hash_password(plain: str) -> str:
-    return _pwd_ctx.hash(plain)
+    return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _pwd_ctx.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
 def create_token(
