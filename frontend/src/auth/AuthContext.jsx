@@ -6,6 +6,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(() => localStorage.getItem('auth_token'))
   const [loading, setLoading] = useState(!!localStorage.getItem('auth_token'))
+  const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
     if (!token) { setLoading(false); return }
@@ -26,6 +27,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('auth_token', newToken)
     setToken(newToken)
     setUser(newUser)
+    setModalOpen(false)
   }
 
   const logout = () => {
@@ -34,8 +36,17 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  const updateUser = (newToken, newUser) => {
+    localStorage.setItem('auth_token', newToken)
+    setToken(newToken)
+    setUser(newUser)
+  }
+
+  const openModal = () => setModalOpen(true)
+  const closeModal = () => setModalOpen(false)
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, updateUser, modalOpen, openModal, closeModal }}>
       {children}
     </AuthContext.Provider>
   )

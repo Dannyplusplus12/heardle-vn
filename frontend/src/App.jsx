@@ -4,6 +4,9 @@ import Sidebar from './components/Sidebar'
 import NgauNhienPage from './pages/NgauNhienPage'
 import FanCungPage from './pages/FanCungPage'
 import DoiDauPage from './pages/DoiDauPage'
+import ProfilePage from './pages/ProfilePage'
+import EditProfilePage from './pages/EditProfilePage'
+import AuthModal from './auth/AuthModal'
 
 export default function App() {
   return (
@@ -17,9 +20,12 @@ export default function App() {
             <Route path="/ngau-nhien" element={<NgauNhienPage />} />
             <Route path="/fan-cung" element={<FanCungPage />} />
             <Route path="/doi-dau" element={<DoiDauPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/edit" element={<EditProfilePage />} />
           </Routes>
         </main>
       </div>
+      <AuthModal />
     </div>
   )
 }

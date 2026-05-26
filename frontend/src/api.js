@@ -5,6 +5,41 @@ function authHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+export async function authRegister(username, name, password) {
+  const res = await fetch(`${API_BASE}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, name, password }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.detail || 'Đăng ký thất bại')
+  return data
+}
+
+export async function authLogin(username, password) {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.detail || 'Đăng nhập thất bại')
+  return data
+}
+
+export async function updateProfile(token, body) {
+  const res = await fetch(`${API_BASE}/api/auth/profile`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.detail || 'Cập nhật thất bại')
+  return data
+}
+
 // ── Game ──────────────────────────────────────────────────────────────────────
 
 export async function fetchNewGame({ genre, difficulty, artists, artistIds, playlistIds } = {}) {

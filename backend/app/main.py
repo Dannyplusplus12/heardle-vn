@@ -35,6 +35,11 @@ async def lifespan(app: FastAPI):
                 "ALTER TABLE artists ADD COLUMN IF NOT EXISTS needs_manual_url boolean NOT NULL DEFAULT false",
                 "ALTER TABLE artists ADD COLUMN IF NOT EXISTS visible boolean NOT NULL DEFAULT true",
                 "ALTER TABLE artists ADD COLUMN IF NOT EXISTS in_random boolean NOT NULL DEFAULT true",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS username varchar(50)",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash varchar(200)",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio text",
+                "ALTER TABLE users ALTER COLUMN email DROP NOT NULL",
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_users_username ON users (username) WHERE username IS NOT NULL",
                 # Backfill artist_id on existing tracks by matching artist_name → artists.name
                 """
                 UPDATE tracks t

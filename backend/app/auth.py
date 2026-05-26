@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 from jose import JWTError, jwt
+from passlib.context import CryptContext
 
 _JWT_SECRET = os.getenv("JWT_SECRET", "heardle-vn-jwt-secret-change-in-production")
 _JWT_ALGORITHM = "HS256"
@@ -14,11 +15,34 @@ _ADMIN_EMAILS = {
     if e.strip()
 }
 
+_pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def create_token(user_id: int, email: str, name: str, is_admin: bool) -> str:
+
+def hash_password(plain: str) -> str:
+    return _pwd_ctx.hash(plain)
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return _pwd_ctx.verify(plain, hashed)
+
+
+def create_token(
+    user_id: int,
+    email: str | None,
+    name: str,
+    is_admin: bool,
+    username: str | None = None,
+) -> str:
     expire = datetime.now(timezone.utc) + timedelta(days=_JWT_EXPIRE_DAYS)
     return jwt.encode(
-        {"sub": str(user_id), "email": email, "name": name, "is_admin": is_admin, "exp": expire},
+        {
+            "sub": str(user_id),
+            "email": email,
+            "name": name,
+            "username": username,
+            "is_admin": is_admin,
+            "exp": expire,
+        },
         _JWT_SECRET,
         algorithm=_JWT_ALGORITHM,
     )
