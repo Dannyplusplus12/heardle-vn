@@ -83,6 +83,20 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/api/admin/test-zing-crawl")
+async def test_zing_crawl(
+    secret: str = Query(...),
+    url: str = Query(...),
+    limit: int = Query(default=20, ge=1, le=50),
+):
+    """Dry-run Zing crawl — returns what would be imported without saving to DB."""
+    if secret != _ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from app.zing import crawl_artist_tracks
+    tracks = await crawl_artist_tracks(url, limit=limit)
+    return {"count": len(tracks), "tracks": tracks[:limit]}
+
+
 @app.get("/api/admin/seed-zing-chart")
 async def admin_seed_zing_chart(
     secret: str = Query(...),

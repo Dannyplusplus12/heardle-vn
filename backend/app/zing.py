@@ -7,6 +7,10 @@ get_stream_url(song_id):
 
 crawl_artist_tracks(zing_url): yt-dlp flat-playlist on artist/chart URL.
 
+Supported artist URL formats (both are accepted, normalised automatically):
+  https://zingmp3.vn/nghe-si/son-tung-m-tp      ← Zing profile page
+  https://zingmp3.vn/son-tung-m-tp/bai-hat       ← yt-dlp ZingMp3UserIE canonical form
+
 Keys from yt-dlp's ZingMP3 extractor (community-maintained, updated when Zing rotates):
   API key:     X5BM3w8N7MKozC0B85o4KMlzLZKhV00y
   HMAC secret: acOrvUS15XRW2o9JksiK1KgQ6Vbds8ZW
@@ -23,6 +27,7 @@ import asyncio
 import hashlib
 import hmac
 import logging
+import re
 import time
 
 import httpx
@@ -153,12 +158,39 @@ def _is_song(title: str) -> bool:
     return not any(kw in t for kw in _REMIX_KEYWORDS)
 
 
+_ZING_ID_RE = re.compile(r'/([A-Z0-9]{6,})\b(?:\.html)?')
+
+
+def _normalize_zing_url(url: str) -> str:
+    """
+    Convert any Zing artist URL form to the canonical form yt-dlp accepts.
+
+    /nghe-si/{slug}          → /{slug}/bai-hat
+    /{slug}/bai-hat          → unchanged (already canonical)
+    /zing-chart              → unchanged (chart URL)
+    """
+    url = url.strip().rstrip("/")
+    m = re.match(r'(https?://(?:mp3\.zing|zingmp3)\.vn)/nghe-si/([^/?#]+)', url)
+    if m:
+        return f"{m.group(1)}/{m.group(2)}/bai-hat"
+    return url
+
+
+def _extract_id_from_url(url: str) -> str:
+    """Extract Zing song ID (e.g. ZW6IIWUO) from a track URL as fallback."""
+    m = _ZING_ID_RE.search(url)
+    return m.group(1) if m else ""
+
+
 def _crawl_sync(zing_url: str, limit: int) -> list[dict]:
     try:
         import yt_dlp
     except ImportError:
         log.error("[zing] yt-dlp not installed")
         return []
+
+    canonical = _normalize_zing_url(zing_url)
+    log.info("[zing] crawling %s", canonical)
 
     opts = {
         "quiet": True,
@@ -171,43 +203,58 @@ def _crawl_sync(zing_url: str, limit: int) -> list[dict]:
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(zing_url, download=False)
+            info = ydl.extract_info(canonical, download=False)
     except Exception as e:
-        log.warning("[zing] yt-dlp crawl failed for %s: %s", zing_url, e)
+        log.warning("[zing] yt-dlp crawl failed for %s: %s", canonical, e)
         return []
 
     if not info:
+        log.warning("[zing] yt-dlp returned nothing for %s", canonical)
         return []
 
     entries = info.get("entries") or ([info] if info.get("id") else [])
+    log.info("[zing] got %d raw entries from %s", len(entries), canonical)
+
     out = []
     for e in entries:
         if not e:
             continue
+        # In flat mode, ZingMp3UserIE may return url-type entries without id populated.
+        # Extract id from the URL as fallback.
         zing_id = e.get("id") or ""
+        webpage_url = e.get("webpage_url") or e.get("url") or ""
+        if not zing_id and webpage_url:
+            zing_id = _extract_id_from_url(webpage_url)
+        if not zing_id:
+            continue
         title = e.get("title") or ""
-        if not zing_id or not title:
+        if not title:
             continue
         if not _is_song(title):
             continue
         duration = e.get("duration") or 0
         if duration >= 600:
             continue
-        webpage_url = e.get("webpage_url") or e.get("url") or ""
         out.append({
             "source": "zing",
             "source_id": zing_id,
             "title": title,
             "artist": e.get("uploader") or e.get("artist") or "",
             "cover_url": e.get("thumbnail"),
-            "permalink_url": webpage_url,
+            "permalink_url": webpage_url or f"https://zingmp3.vn/bai-hat/x/{zing_id}.html",
             "duration_ms": int(duration * 1000),
         })
+    log.info("[zing] %d usable entries after filtering", len(out))
     return out
 
 
 async def crawl_artist_tracks(zing_url: str, limit: int = 300) -> list[dict]:
-    """Crawl metadata from a Zing artist page or chart URL via yt-dlp."""
+    """Crawl metadata from a Zing artist page or chart URL via yt-dlp.
+
+    Accepts both:
+      https://zingmp3.vn/nghe-si/son-tung-m-tp   (Zing profile page)
+      https://zingmp3.vn/son-tung-m-tp/bai-hat    (yt-dlp canonical)
+    """
     return await asyncio.to_thread(_crawl_sync, zing_url, limit)
 
 

@@ -242,7 +242,7 @@ export default function ArtistModal({ artist, onClose, onSaved }) {
                     onCrawl={() => handleCrawl('zing')}
                     crawling={crawling === 'zing'}
                     crawlDisabled={!form.zing_url}
-                    placeholder="https://zingmp3.vn/nghe-si/son-tung-m-tp"
+                    placeholder="https://zingmp3.vn/son-tung-m-tp/bai-hat"
                   />
                   {crawlMsg && (
                     <p className="text-[9px] text-amber-400 font-bold">{crawlMsg}</p>
@@ -254,7 +254,7 @@ export default function ArtistModal({ artist, onClose, onSaved }) {
                   <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">Nguồn crawl</p>
                   <Field label="SoundCloud URL" value={form.soundcloud_url} onChange={set('soundcloud_url')} placeholder="https://soundcloud.com/artist" />
                   <Field label="YouTube URL" value={form.youtube_url} onChange={set('youtube_url')} placeholder="https://youtube.com/@artist" />
-                  <Field label="Zing MP3 URL" value={form.zing_url} onChange={set('zing_url')} placeholder="https://zingmp3.vn/nghe-si/son-tung-m-tp" />
+                  <Field label="Zing MP3 URL" value={form.zing_url} onChange={set('zing_url')} placeholder="https://zingmp3.vn/son-tung-m-tp/bai-hat" />
                 </div>
               )}
 
