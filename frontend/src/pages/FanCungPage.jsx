@@ -7,6 +7,7 @@ import ArtistModal from '../components/admin/ArtistModal'
 import PlaylistModal from '../components/admin/PlaylistModal'
 import NeedsUrlPanel from '../components/admin/NeedsUrlPanel'
 import AddTrackModal from '../components/admin/AddTrackModal'
+import AdBanner from '../components/AdBanner'
 
 // ── Utility ───────────────────────────────────────────────────────────────────
 
@@ -523,12 +524,15 @@ export default function FanCungPage() {
 
   if (step === 'playing') {
     return (
-      <div className="flex items-center justify-center min-h-full p-5">
-        <GameScreen
-          artistIds={[...selectedArtistIds]}
-          playlistIds={[...selectedPlaylistIds]}
-          onBack={() => setStep('pick')}
-        />
+      <div className="flex flex-col items-center min-h-full p-5">
+        <div className="flex-1 flex items-center justify-center w-full">
+          <GameScreen
+            artistIds={[...selectedArtistIds]}
+            playlistIds={[...selectedPlaylistIds]}
+            onBack={() => setStep('pick')}
+          />
+        </div>
+        <AdBanner slot="REPLACE_WITH_SLOT_ID" className="w-full max-w-xl mt-4" />
       </div>
     )
   }
