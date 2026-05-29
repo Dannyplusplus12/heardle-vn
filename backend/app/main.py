@@ -59,11 +59,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Heardle VN API", lifespan=lifespan)
 
-_FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
+_FRONTEND_ORIGINS = [
+    o.strip()
+    for o in os.getenv("FRONTEND_ORIGIN", "http://localhost:5173").split(",")
+    if o.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[_FRONTEND_ORIGIN],
+    allow_origins=_FRONTEND_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
