@@ -107,7 +107,7 @@ function PickingScreen({ selectedArtistIds, selectedPlaylistIds, toggleArtist, t
   const totalSelected = selectedArtistIds.size + selectedPlaylistIds.size
 
   return (
-    <div className="flex h-full bg-[#070707]">
+    <div className="flex h-full">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="shrink-0 px-6 py-4 border-b-2 border-white/8 flex items-center gap-4">
@@ -231,7 +231,7 @@ function PickingScreen({ selectedArtistIds, selectedPlaylistIds, toggleArtist, t
 
 function HomeScreen({ playerName, setPlayerName, joinCode, setJoinCode, isLoggedIn, onCreateRoom, onJoinRoom, onGoogleLogin, error }) {
   return (
-    <div className="flex items-center justify-center min-h-full p-5 bg-[#070707]">
+    <div className="flex items-center justify-center min-h-full p-5">
       <div className="w-full max-w-sm">
         {/* Title */}
         <div className="text-center mb-10">

@@ -202,7 +202,7 @@ function LiveLeaderboard({ players, myId, notifications }) {
   const sorted = [...players].sort((a, b) => b.score - a.score)
 
   return (
-    <div className="w-56 shrink-0 border-l-2 border-white/8 bg-[#070707] flex flex-col">
+    <div className="w-56 shrink-0 border-l-2 border-white/8 bg-black/75 flex flex-col">
       <div className="shrink-0 px-4 py-3 border-b-2 border-[#FF006E]/30 bg-[#FF006E]/5">
         <span className="text-[9px] font-black tracking-[0.35em] uppercase text-[#FF006E]">✦ BXH TRỰC TIẾP ✦</span>
       </div>
@@ -273,7 +273,7 @@ function LobbyView({ players, code, isHost, onStart, onLeave }) {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center p-6 bg-[#070707]">
+    <div className="flex-1 flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -382,7 +382,7 @@ function LoadingView({ players }) {
   const readyCount = conn.filter(p => p.is_ready).length
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-[#070707]">
+    <div className="flex-1 flex items-center justify-center">
       <div className="text-center">
         <div className="text-[9px] font-black tracking-[0.4em] uppercase mb-6" style={{ color: '#FF006E' }}>✦ ĐANG TẢI BÀI HÁT ✦</div>
         <div className="w-12 h-12 border-2 border-t-transparent animate-spin mx-auto mb-6"
@@ -590,7 +590,7 @@ export default function RoomScreen({ code, token, onLeave }) {
   }, [code, token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex h-full bg-[#070707] relative">
+    <div className="flex h-full relative">
 
       {/* ── Lobby ── */}
       {room.phase === 'lobby' && (
