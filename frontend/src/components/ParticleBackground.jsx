@@ -28,41 +28,41 @@ export default function ParticleBackground() {
     window.addEventListener('resize', resize)
 
     // Layer 1: twinkling rising dots
-    const dots = Array.from({ length: 70 }, () => ({
+    const dots = Array.from({ length: 80 }, () => ({
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
-      r: Math.random() * 2.2 + 0.6,
-      vx: (Math.random() - 0.5) * 0.25,
-      vy: -(Math.random() * 0.35 + 0.06),
-      baseOpacity: Math.random() * 0.13 + 0.06,
+      r: Math.random() * 3.5 + 1.2,
+      vx: (Math.random() - 0.5) * 0.28,
+      vy: -(Math.random() * 0.4 + 0.08),
+      baseOpacity: Math.random() * 0.25 + 0.15,
       phase: Math.random() * Math.PI * 2,
-      phaseSpeed: Math.random() * 0.025 + 0.008,
+      phaseSpeed: Math.random() * 0.03 + 0.01,
       color: pick(PALETTE),
     }))
 
     // Layer 2: pulsing soft orbs
-    const orbs = Array.from({ length: 12 }, () => ({
+    const orbs = Array.from({ length: 14 }, () => ({
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
-      r: Math.random() * 50 + 22,
-      vx: (Math.random() - 0.5) * 0.12,
-      vy: (Math.random() - 0.5) * 0.12,
-      baseOpacity: Math.random() * 0.045 + 0.025,
+      r: Math.random() * 70 + 40,
+      vx: (Math.random() - 0.5) * 0.13,
+      vy: (Math.random() - 0.5) * 0.13,
+      baseOpacity: Math.random() * 0.1 + 0.06,
       phase: Math.random() * Math.PI * 2,
       phaseSpeed: Math.random() * 0.012 + 0.004,
       color: pick(PALETTE),
     }))
 
     // Layer 3: large ambient color blobs
-    const glows = Array.from({ length: 5 }, () => ({
+    const glows = Array.from({ length: 6 }, () => ({
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
-      r: Math.random() * 160 + 100,
-      vx: (Math.random() - 0.5) * 0.045,
-      vy: (Math.random() - 0.5) * 0.045,
-      baseOpacity: Math.random() * 0.028 + 0.015,
+      r: Math.random() * 200 + 150,
+      vx: (Math.random() - 0.5) * 0.05,
+      vy: (Math.random() - 0.5) * 0.05,
+      baseOpacity: Math.random() * 0.06 + 0.04,
       phase: Math.random() * Math.PI * 2,
-      phaseSpeed: Math.random() * 0.006 + 0.002,
+      phaseSpeed: Math.random() * 0.007 + 0.003,
       color: pick(PALETTE),
     }))
 
@@ -79,10 +79,10 @@ export default function ParticleBackground() {
         y: Math.random() * canvas.height * 0.6,
         vx, vy,
         speed: Math.sqrt(vx * vx + vy * vy),
-        len: Math.random() * 90 + 60,
+        len: Math.random() * 140 + 90,
         life: 1,
-        decay: Math.random() * 0.007 + 0.004,
-        peakOpacity: Math.random() * 0.35 + 0.2,
+        decay: Math.random() * 0.006 + 0.003,
+        peakOpacity: Math.random() * 0.45 + 0.35,
         color: pick(PALETTE),
       })
       nextStarTime = now + Math.random() * 2500 + 1200
@@ -143,11 +143,11 @@ export default function ParticleBackground() {
         ctx.moveTo(tx, ty)
         ctx.lineTo(s.x, s.y)
         ctx.strokeStyle = grad
-        ctx.lineWidth = 1.5
+        ctx.lineWidth = 2.5
         ctx.stroke()
         ctx.beginPath()
-        ctx.arc(s.x, s.y, 1.8, 0, Math.PI * 2)
-        ctx.fillStyle = rgba(s.color, Math.min(alpha * 1.5, 0.8))
+        ctx.arc(s.x, s.y, 3, 0, Math.PI * 2)
+        ctx.fillStyle = rgba(s.color, Math.min(alpha * 1.6, 0.9))
         ctx.fill()
         s.x += s.vx * delta
         s.y += s.vy * delta
